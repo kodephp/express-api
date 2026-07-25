@@ -4,11 +4,12 @@
 
 ## 功能特性
 
-- 支持多种快递公司API，覆盖「国内快递 + 国际物流（跨境 / 货运）」完整物流链：
+- 支持多种快递公司API，覆盖「国内快递 + 国内货运（零担/整车/快运）+ 国际物流（跨境 / 货运）」完整物流链：
   - 国内快递：EMS、顺丰SF、韵达、中通、申通、菜鸟网络
+  - 国内货运：德邦物流、安能物流、天地华宇（零担 / 整车 / 快运，支持网点查询、运费报价）
   - 国际物流：4PX递四方、顺丰国际、DHL国际、云途物流、EMS国际、燕文物流
     （支持海运 / 空运下单、海关申报、清关查询、运费报价）
-- 当前版本：v2.0.0
+- 当前版本：v2.1.0
 - 统一的接口调用方式，简化开发流程
 - 灵活的面单布局管理，支持可视化编辑
 - 完善的错误处理和响应标准化
@@ -687,6 +688,50 @@ $customs = $client->declareCustoms([
 ]);
 ```
 
+### 国内货运（零担 / 整车 / 快运）快速开始
+
+国内货运客户端与国内快递 / 国际物流共用同一套工厂入口，差异仅在配置字段与「服务类型（零担 / 整车 / 快运）」等货运要素。
+
+```php
+use Kode\ExpressApi\ExpressApiClient;
+
+// 德邦物流配置（MD5 签名鉴权）
+$debangConfig = [
+    'app_key'    => 'YOUR_DEBANG_APP_KEY',
+    'app_secret' => 'YOUR_DEBANG_APP_SECRET',
+    'sandbox'    => true,
+];
+
+$client = ExpressApiClient::create('debang', $debangConfig);
+
+// 零担下单（自动注入 service_type = ltl）
+$response = $client->createLtl([
+    'order_no'    => 'LTL' . date('YmdHis'),
+    'sender'      => ['name' => '张三', 'phone' => '13800138000', 'address' => '上海市浦东新区XX路1号'],
+    'receiver'    => ['name' => '李四', 'phone' => '13900139000', 'address' => '北京市朝阳区XX街2号'],
+    'goods'       => [['name' => '机械设备', 'weight' => 500]],
+    'origin'      => '上海',
+    'destination' => '北京',
+]);
+
+// 整车下单（自动注入 service_type = ftl）
+$response = $client->createFtl([ /* 同上结构 */ ]);
+
+// 运费报价
+$quote = $client->getQuotation([
+    'service_type' => 'ltl',
+    'origin'      => '上海',
+    'destination' => '北京',
+    'weight'      => 500,
+]);
+
+// 网点查询
+$network = $client->queryNetwork([
+    'city'    => '上海',
+    'keyword' => '浦东',
+]);
+```
+
 ### 自动发现能力菜单（物流链总览）
 
 `getApiMenu()` 会基于各客户端实际方法，按 `order / query / label / freight / customs` 分类自动生成能力目录，
@@ -1117,7 +1162,24 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 
 > 注：各服务商真实接口路径与字段以签约后的开放平台文档为准，SDK 已提供标准鉴权与传输骨架，接入时按文档核对即可。
 
-- 计划支持：京东快递、快递100、快递鸟、聚合快递，以及国内货运（德邦、安能等）模块
+### 国内货运（零担 / 整车 / 快运）
+
+| 代码 | 名称 | 鉴权方式 | 服务类型 |
+| --- | --- | --- | --- |
+| `debang` | 德邦物流 | MD5 签名 | 零担 / 整车 / 快运 |
+| `ane` | 安能物流 | HMAC-SHA256 签名 | 零担 / 整车 / 快运 |
+| `hoau` | 天地华宇 | MD5 签名 | 零担 / 整车 / 快运 |
+
+国内货运客户端统一继承 `DomesticFreight\AbstractDomesticFreightClient`，提供：
+- `sendShipment()` 下单（零担 / 整车 / 快运，含发货人 / 收货人 / 货物 / 起止地）
+- `createLtl()` / `createFtl()` 零担 / 整车便捷入口
+- `getQuotation()` 运费报价
+- `queryNetwork()` 网点查询
+- `queryOrder()` / `queryTracking()` / `cancelOrder()` / `printLabel()` 标准能力
+
+> 注：各服务商真实接口路径与字段以签约后的开放平台文档为准，SDK 已提供标准鉴权与传输骨架，接入时按文档核对即可。
+
+- 计划支持：京东快递、快递100、快递鸟、聚合快递
 
 ## 各快递公司特定配置参数
 

@@ -27,6 +27,12 @@ use Kode\ExpressApi\EmsInternational\Client as EmsInternationalClient;
 use Kode\ExpressApi\EmsInternational\Config as EmsInternationalConfig;
 use Kode\ExpressApi\Yanwen\Client as YanwenClient;
 use Kode\ExpressApi\Yanwen\Config as YanwenConfig;
+use Kode\ExpressApi\Debang\Client as DebangClient;
+use Kode\ExpressApi\Debang\Config as DebangConfig;
+use Kode\ExpressApi\Ane\Client as AneClient;
+use Kode\ExpressApi\Ane\Config as AneConfig;
+use Kode\ExpressApi\Hoau\Client as HoauClient;
+use Kode\ExpressApi\Hoau\Config as HoauConfig;
 
 /**
  * 通用快递API客户端
@@ -40,7 +46,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '2.0.0';
+    public const VERSION = '2.1.0';
 
     /**
      * 支持的快递公司列表
@@ -107,6 +113,21 @@ class ExpressApiClient
             'name' => '燕文物流',
             'client' => YanwenClient::class,
             'config' => YanwenConfig::class
+        ],
+        'debang' => [
+            'name' => '德邦物流',
+            'client' => DebangClient::class,
+            'config' => DebangConfig::class
+        ],
+        'ane' => [
+            'name' => '安能物流',
+            'client' => AneClient::class,
+            'config' => AneConfig::class
+        ],
+        'hoau' => [
+            'name' => '天地华宇',
+            'client' => HoauClient::class,
+            'config' => HoauConfig::class
         ]
     ];
 
@@ -149,6 +170,11 @@ class ExpressApiClient
         'getQuotation'      => ['label' => '运费报价',       'category' => 'freight'],
         'declareCustoms'    => ['label' => '海关申报',       'category' => 'customs'],
         'queryCustoms'      => ['label' => '清关查询',       'category' => 'customs'],
+        // 国内货运（零担 / 整车 / 快运）
+        'createLtl'         => ['label' => '零担下单',       'category' => 'freight'],
+        'createFtl'         => ['label' => '整车下单',       'category' => 'freight'],
+        'queryNetwork'      => ['label' => '网点查询',       'category' => 'freight'],
+        'cargoInsurance'    => ['label' => '货物保价',       'category' => 'freight'],
     ];
 
     /**

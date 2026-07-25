@@ -21,6 +21,7 @@ class ExpressApiClientMenuTest extends TestCase
         $expected = [
             'ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao',
             'fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen',
+            'debang', 'ane', 'hoau',
         ];
         $this->assertSame($expected, array_keys($menu['couriers']));
 
@@ -133,5 +134,23 @@ class ExpressApiClientMenuTest extends TestCase
 
         // 同时兼容标准下单（需指定运输方式）
         $this->assertArrayHasKey('sendShipment', $ops['order']);
+    }
+
+    public function testDomesticFreightHasLtlFtlAndNetworkOperations(): void
+    {
+        foreach (['debang', 'ane', 'hoau'] as $code) {
+            $menu = ExpressApiClient::getApiMenu($code);
+            $ops = $menu['couriers'][$code]['operations'];
+
+            // 国内货运核心能力：下单 / 订单查询 / 轨迹 / 报价
+            $this->assertArrayHasKey('sendShipment', $ops['order'] ?? []);
+            $this->assertArrayHasKey('queryOrder', $ops['query'] ?? []);
+            $this->assertArrayHasKey('queryTracking', $ops['query'] ?? []);
+            // 货运专属：零担 / 整车 / 网点查询
+            $this->assertArrayHasKey('freight', $ops);
+            $this->assertArrayHasKey('createLtl', $ops['freight']);
+            $this->assertArrayHasKey('createFtl', $ops['freight']);
+            $this->assertArrayHasKey('queryNetwork', $ops['freight']);
+        }
     }
 }
