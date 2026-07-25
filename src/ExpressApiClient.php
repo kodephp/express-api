@@ -28,7 +28,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '1.3.0';
+    public const VERSION = '1.4.0';
 
     /**
      * 支持的快递公司列表
@@ -66,6 +66,41 @@ class ExpressApiClient
             'client' => CainiaoClient::class,
             'config' => CainiaoConfig::class
         ]
+    ];
+
+    /**
+     * API 操作目录（方法名 => 元数据）
+     *
+     * 集中描述 SDK 支持的全部快递 API 操作及其分类，供 getApiMenu() 生成能力菜单。
+     * 各快递商实际支持的操作通过反射（method_exists）动态发现，无需在此逐个标注。
+     *
+     * @var array
+     */
+    private const OPERATIONS = [
+        // 下单 / 订单
+        'sendShipment'       => ['label' => '下单/发货',     'category' => 'order'],
+        'batchSendShipment'  => ['label' => '批量下单',       'category' => 'order'],
+        'createOrder'        => ['label' => '创建订单',       'category' => 'order'],
+        'batchCreateOrder'   => ['label' => '批量创建订单',   'category' => 'order'],
+        'cancelOrder'        => ['label' => '取消订单',       'category' => 'order'],
+        'intercept'          => ['label' => '拦截件',         'category' => 'order'],
+        'interceptOrder'     => ['label' => '拦截件(订单级)', 'category' => 'order'],
+        'modify'             => ['label' => '改件信息',       'category' => 'order'],
+        'updateOrderInfo'    => ['label' => '更新订单信息',   'category' => 'order'],
+        'pickupNotice'       => ['label' => '揽收通知',       'category' => 'order'],
+        'createPickup'       => ['label' => '创建揽收',       'category' => 'order'],
+        // 查询
+        'queryOrder'             => ['label' => '订单查询',         'category' => 'query'],
+        'batchQueryOrders'       => ['label' => '批量订单查询',     'category' => 'query'],
+        'queryTracking'          => ['label' => '轨迹查询',         'category' => 'query'],
+        'batchQueryTracking'     => ['label' => '批量轨迹查询',     'category' => 'query'],
+        'queryTrackingWithCourier' => ['label' => '指定快递商轨迹查询', 'category' => 'query'],
+        // 面单
+        'printLabel'        => ['label' => '面单打印',       'category' => 'label'],
+        'batchPrintLabels'  => ['label' => '批量面单打印',   'category' => 'label'],
+        'getLabelTemplate'  => ['label' => '获取面单模板',   'category' => 'label'],
+        'printWaybill'      => ['label' => '打印面单',       'category' => 'label'],
+        'getWaybillBalance' => ['label' => '查询面单余额',   'category' => 'label'],
     ];
 
     /**
@@ -137,6 +172,72 @@ class ExpressApiClient
             $result[$code] = $info['name'];
         }
         return $result;
+    }
+
+    /**
+     * 获取 API 能力菜单（快递商 -> 可用操作目录）
+     *
+     * 返回所有（或指定）快递商支持的 API 操作，按业务分类（order/query/label）分组，
+     * 便于调用方自动发现能力、生成文档或前端动态渲染菜单。
+     *
+     * 各快递商实际支持的操作通过反射（method_exists）基于其 Client 类动态判定，
+     * 因此新增/调整 Client 方法后此处无需手动维护。
+     *
+     * @param string|null $courier 指定快递商代码（如 'ems'）；为 null 时返回全部
+     * @return array
+     * @throws \InvalidArgumentException
+     */
+    public static function getApiMenu(?string $courier = null): array
+    {
+        if ($courier !== null) {
+            $courier = strtolower($courier);
+            if (!isset(self::$supportedCouriers[$courier])) {
+                throw new \InvalidArgumentException(
+                    "不支持的快递公司: {$courier}。支持的快递公司有: " .
+                    implode(', ', array_keys(self::$supportedCouriers))
+                );
+            }
+            $codes = [$courier];
+        } else {
+            $codes = array_keys(self::$supportedCouriers);
+        }
+
+        $menu = [
+            'version'  => self::VERSION,
+            'couriers' => [],
+        ];
+
+        foreach ($codes as $code) {
+            $info = self::$supportedCouriers[$code];
+            $clientClass = $info['client'];
+
+            $grouped = [];
+            foreach (self::OPERATIONS as $method => $meta) {
+                if (!method_exists($clientClass, $method)) {
+                    continue;
+                }
+                $grouped[$meta['category']][$method] = ['label' => $meta['label']];
+            }
+            ksort($grouped);
+
+            $menu['couriers'][$code] = [
+                'name'           => $info['name'],
+                'operation_count' => array_sum(array_map('count', $grouped)),
+                'operations'     => $grouped,
+            ];
+        }
+
+        return $menu;
+    }
+
+    /**
+     * 获取完整的 API 操作目录（与具体快递商无关）
+     *
+     * @return array
+     */
+    public static function getOperationCatalog(): array
+    {
+        return self::OPERATIONS;
     }
 
     /**
