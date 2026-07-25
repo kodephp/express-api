@@ -15,6 +15,8 @@ use Kode\ExpressApi\Sto\Client as StoClient;
 use Kode\ExpressApi\Sto\Config as StoConfig;
 use Kode\ExpressApi\Cainiao\Client as CainiaoClient;
 use Kode\ExpressApi\Cainiao\Config as CainiaoConfig;
+use Kode\ExpressApi\International\Client as InternationalClient;
+use Kode\ExpressApi\International\Config as InternationalConfig;
 
 /**
  * 通用快递API客户端
@@ -28,7 +30,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '1.4.0';
+    public const VERSION = '1.5.0';
 
     /**
      * 支持的快递公司列表
@@ -65,6 +67,11 @@ class ExpressApiClient
             'name' => '菜鸟网络',
             'client' => CainiaoClient::class,
             'config' => CainiaoConfig::class
+        ],
+        'international' => [
+            'name' => '国际物流',
+            'client' => InternationalClient::class,
+            'config' => InternationalConfig::class
         ]
     ];
 
@@ -101,6 +108,12 @@ class ExpressApiClient
         'getLabelTemplate'  => ['label' => '获取面单模板',   'category' => 'label'],
         'printWaybill'      => ['label' => '打印面单',       'category' => 'label'],
         'getWaybillBalance' => ['label' => '查询面单余额',   'category' => 'label'],
+        // 国际物流（海运 / 空运）
+        'createSeaFreight'  => ['label' => '海运下单',       'category' => 'freight'],
+        'createAirFreight'  => ['label' => '空运下单',       'category' => 'freight'],
+        'getQuotation'      => ['label' => '运费报价',       'category' => 'freight'],
+        'declareCustoms'    => ['label' => '海关申报',       'category' => 'customs'],
+        'queryCustoms'      => ['label' => '清关查询',       'category' => 'customs'],
     ];
 
     /**

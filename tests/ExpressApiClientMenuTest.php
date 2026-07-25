@@ -18,7 +18,7 @@ class ExpressApiClientMenuTest extends TestCase
         $this->assertSame(ExpressApiClient::VERSION, $menu['version']);
         $this->assertArrayHasKey('couriers', $menu);
 
-        $expected = ['ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao'];
+        $expected = ['ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao', 'international'];
         $this->assertSame($expected, array_keys($menu['couriers']));
 
         foreach ($menu['couriers'] as $courier) {
@@ -110,5 +110,30 @@ class ExpressApiClientMenuTest extends TestCase
         $this->assertArrayHasKey('queryTracking', $catalog);
         $this->assertSame('order', $catalog['sendShipment']['category']);
         $this->assertArrayHasKey('label', $catalog['sendShipment']);
+        // 国际物流能力
+        $this->assertArrayHasKey('createSeaFreight', $catalog);
+        $this->assertSame('freight', $catalog['createSeaFreight']['category']);
+        $this->assertArrayHasKey('declareCustoms', $catalog);
+        $this->assertSame('customs', $catalog['declareCustoms']['category']);
+    }
+
+    public function testInternationalHasFreightAndCustomsOperations(): void
+    {
+        $menu = ExpressApiClient::getApiMenu('international');
+        $ops = $menu['couriers']['international']['operations'];
+
+        // 国际物流独有的海运 / 空运 / 报价能力
+        $this->assertArrayHasKey('freight', $ops);
+        $this->assertArrayHasKey('createSeaFreight', $ops['freight']);
+        $this->assertArrayHasKey('createAirFreight', $ops['freight']);
+        $this->assertArrayHasKey('getQuotation', $ops['freight']);
+
+        // 海关申报 / 清关能力
+        $this->assertArrayHasKey('customs', $ops);
+        $this->assertArrayHasKey('declareCustoms', $ops['customs']);
+        $this->assertArrayHasKey('queryCustoms', $ops['customs']);
+
+        // 同时兼容标准下单（需指定运输方式）
+        $this->assertArrayHasKey('sendShipment', $ops['order']);
     }
 }
