@@ -2,99 +2,49 @@
 
 namespace Kode\ExpressApi\Cainiao;
 
-use Kode\ExpressApi\Common\ClientInterface;
+use Kode\ExpressApi\Common\AbstractCourierClient;
 use Kode\ExpressApi\Common\Exception\ExpressApiException;
 
 /**
  * 菜鸟网络API 客户端
  */
-class Client implements ClientInterface
+class Client extends AbstractCourierClient
 {
     /**
-     * @var Config 配置信息
+     * @return string
      */
-    protected $config;
-
-    /**
-     * @var Auth 认证对象
-     */
-    protected $auth;
-
-    /**
-     * 构造函数
-     *
-     * @param array|Config $config 配置信息
-     */
-    public function __construct($config = [])
+    protected function getProvider(): string
     {
-        if (is_array($config)) {
-            $this->config = new Config($config);
-        } elseif ($config instanceof Config) {
-            $this->config = $config;
-        } else {
-            throw new \InvalidArgumentException('配置信息必须是数组或Config对象');
-        }
-
-        $this->auth = new Auth($this->config);
+        return 'cainiao';
     }
 
     /**
-     * 获取配置对象
-     *
-     * @return Config
+     * @return string
      */
-    public function getConfig(): Config
+    protected function getConfigClass(): string
     {
-        return $this->config;
+        return Config::class;
     }
 
     /**
-     * 获取认证对象
-     *
-     * @return Auth
+     * @return string
      */
-    public function getAuth(): Auth
+    protected function getAuthClass(): string
     {
-        return $this->auth;
+        return Auth::class;
     }
 
     /**
-     * 发送HTTP请求
+     * 菜鸟需要追加 X-Partner-Id 请求头
      *
-     * @param string $method HTTP方法
-     * @param string $uri 请求URI
-     * @param array $data 请求数据
-     * @param array $headers 请求头
+     * @param array $headers
      * @return array
-     * @throws ExpressApiException
      */
-    protected function request(string $method, string $uri, array $data = [], array $headers = []): array
+    protected function prepareRequestHeaders(array $headers): array
     {
-        $url = $this->config->getBaseUrl() . $uri;
-
-        // 添加认证头
-        $headers['Authorization'] = 'Bearer ' . $this->auth->getAccessToken();
-        $headers['Content-Type'] = 'application/json';
         $headers['X-Partner-Id'] = $this->config->getPartnerId();
 
-        try {
-            // 使用通用HTTP客户端发送请求
-            $response = \Kode\ExpressApi\Common\HttpClient::request(
-                $method,
-                $url,
-                $data,
-                $headers,
-                $this->config->getTimeout()
-            );
-
-            // 使用通用响应处理器处理响应
-            return \Kode\ExpressApi\Common\ResponseHandler::handle($response, 'cainiao');
-        } catch (\Exception $e) {
-            if ($e instanceof ExpressApiException) {
-                throw $e;
-            }
-            throw new ExpressApiException('请求失败: ' . $e->getMessage(), 0, $e);
-        }
+        return $headers;
     }
 
     /**
@@ -350,17 +300,17 @@ class Client implements ClientInterface
             throw new ExpressApiException('订单ID不能为空');
         }
         $printData = ['order_ids' => [$orderId]];
-        
+
         // 如果提供了模板代码，使用它；否则使用默认模板
         if (!empty($data['template_code'])) {
             $printData['template_code'] = $data['template_code'];
         } else {
             $printData['template_code'] = $this->config->getDefaultTemplateCode();
         }
-        
+
         // 合并其他打印参数
         $printData = array_merge($printData, $data);
-        
+
         return $this->request('POST', '/waybill/print', $printData);
     }
 

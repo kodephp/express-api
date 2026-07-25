@@ -2,98 +2,36 @@
 
 namespace Kode\ExpressApi\Zto;
 
-use Kode\ExpressApi\Common\ClientInterface;
+use Kode\ExpressApi\Common\AbstractCourierClient;
 use Kode\ExpressApi\Common\Exception\ExpressApiException;
 
 /**
  * 中通快递API 客户端
  */
-class Client implements ClientInterface
+class Client extends AbstractCourierClient
 {
     /**
-     * @var Config 配置信息
+     * @return string
      */
-    protected $config;
-
-    /**
-     * @var Auth 认证对象
-     */
-    protected $auth;
-
-    /**
-     * 构造函数
-     *
-     * @param array|Config $config 配置信息
-     */
-    public function __construct($config = [])
+    protected function getProvider(): string
     {
-        if (is_array($config)) {
-            $this->config = new Config($config);
-        } elseif ($config instanceof Config) {
-            $this->config = $config;
-        } else {
-            throw new \InvalidArgumentException('配置信息必须是数组或Config对象');
-        }
-
-        $this->auth = new Auth($this->config);
+        return 'zto';
     }
 
     /**
-     * 获取配置对象
-     *
-     * @return Config
+     * @return string
      */
-    public function getConfig(): Config
+    protected function getConfigClass(): string
     {
-        return $this->config;
+        return Config::class;
     }
 
     /**
-     * 获取认证对象
-     *
-     * @return Auth
+     * @return string
      */
-    public function getAuth(): Auth
+    protected function getAuthClass(): string
     {
-        return $this->auth;
-    }
-
-    /**
-     * 发送HTTP请求
-     *
-     * @param string $method HTTP方法
-     * @param string $uri 请求URI
-     * @param array $data 请求数据
-     * @param array $headers 请求头
-     * @return array
-     * @throws ExpressApiException
-     */
-    protected function request(string $method, string $uri, array $data = [], array $headers = []): array
-    {
-        $url = $this->config->getBaseUrl() . $uri;
-
-        // 添加认证头
-        $headers['Authorization'] = 'Bearer ' . $this->auth->getAccessToken();
-        $headers['Content-Type'] = 'application/json';
-
-        try {
-            // 使用通用HTTP客户端发送请求
-            $response = \Kode\ExpressApi\Common\HttpClient::request(
-                $method,
-                $url,
-                $data,
-                $headers,
-                $this->config->getTimeout()
-            );
-
-            // 使用通用响应处理器处理响应
-            return \Kode\ExpressApi\Common\ResponseHandler::handle($response, 'zto');
-        } catch (\Exception $e) {
-            if ($e instanceof ExpressApiException) {
-                throw $e;
-            }
-            throw new ExpressApiException('请求失败: ' . $e->getMessage(), 0, $e);
-        }
+        return Auth::class;
     }
 
     /**
@@ -283,12 +221,12 @@ class Client implements ClientInterface
             throw new ExpressApiException('订单ID不能为空');
         }
         $printData = ['order_id' => $orderId];
-        
+
         // 添加可选参数
         if (!empty($data)) {
             $printData = array_merge($printData, $data);
         }
-        
+
         return $this->request('POST', '/print/label', $printData);
     }
 
