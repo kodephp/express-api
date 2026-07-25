@@ -4,7 +4,11 @@
 
 ## 功能特性
 
-- 支持多种快递公司API（目前已集成：EMS、顺丰SF、韵达、中通、申通、菜鸟网络）
+- 支持多种快递公司API，覆盖「国内快递 + 国际物流（跨境 / 货运）」完整物流链：
+  - 国内快递：EMS、顺丰SF、韵达、中通、申通、菜鸟网络
+  - 国际物流：4PX递四方、顺丰国际、DHL国际、云途物流、EMS国际、燕文物流
+    （支持海运 / 空运下单、海关申报、清关查询、运费报价）
+- 当前版本：v2.0.0
 - 统一的接口调用方式，简化开发流程
 - 灵活的面单布局管理，支持可视化编辑
 - 完善的错误处理和响应标准化
@@ -634,6 +638,66 @@ $response = $stoClient->batchPrintLabels($orderIds, $printData);
 $response = $cainiaoClient->batchPrintLabels($orderIds, $printData);
 ```
 
+## 国际物流（跨境 / 货运）快速开始
+
+国际物流客户端与国内快递共用同一套工厂入口，差异仅在配置字段与「运输方式 / 海关申报」等国际要素。
+
+```php
+use Kode\ExpressApi\ExpressApiClient;
+
+// 顺丰国际配置（HMAC-SHA256 签名鉴权）
+$sfIntlConfig = [
+    'app_key'       => 'YOUR_SF_INTL_APP_KEY',
+    'app_secret'    => 'YOUR_SF_INTL_APP_SECRET',
+    'customer_code' => 'YOUR_CUSTOMER_CODE',
+    'sandbox'       => true,
+];
+
+$client = ExpressApiClient::create('sf_international', $sfIntlConfig);
+
+// 空运下单（自动注入 mode = air）
+$response = $client->createAirFreight([
+    'order_no'            => 'INTL' . date('YmdHis'),
+    'destination_country' => 'US',
+    'sender'   => ['name' => '张三', 'phone' => '13800138000', 'address' => '深圳市南山区'],
+    'recipient' => ['name' => 'John', 'phone' => '1234567890', 'address' => '1st Ave, New York'],
+    'items'    => [['name' => '样品', 'quantity' => 1, 'weight' => 0.5]],
+    'hs_code'        => '123456',
+    'product_name'   => 'Sample',
+    'declared_value' => 10,
+    'currency'       => 'USD',
+    'origin_country' => 'CN',
+]);
+
+// 运费报价
+$quote = $client->getQuotation([
+    'mode'        => 'air',
+    'origin'      => 'CN',
+    'destination' => 'US',
+    'weight'      => 1.2,
+]);
+
+// 海关申报
+$customs = $client->declareCustoms([
+    'hs_code'        => '123456',
+    'product_name'   => 'Sample',
+    'declared_value' => 10,
+    'currency'       => 'USD',
+    'origin_country' => 'CN',
+]);
+```
+
+### 自动发现能力菜单（物流链总览）
+
+`getApiMenu()` 会基于各客户端实际方法，按 `order / query / label / freight / customs` 分类自动生成能力目录，
+无需手工维护，便于前端动态渲染菜单或生成文档：
+
+```php
+$menu = ExpressApiClient::getApiMenu();
+// $menu['couriers']['fourpx']['operations']['freight'] => ['createSeaFreight','createAirFreight','getQuotation']
+// $menu['couriers']['fourpx']['operations']['customs'] => ['declareCustoms','queryCustoms']
+```
+
 ## 面单布局功能设计
 
 ### 功能概述
@@ -1018,13 +1082,42 @@ Closes #123
 
 ## 支持的快递公司
 
-- EMS（中国邮政速递物流）
-- SF（顺丰速运）
-- 韵达快递
-- 中通快递
-- 申通快递
-- 菜鸟网络
-- 计划支持：京东快递、快递100、快递鸟、聚合快递
+SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 空运）→ 海关清关 → 末端派送**。
+
+### 国内快递（快递）
+
+| 代码 | 名称 | 备注 |
+| --- | --- | --- |
+| `ems` | 邮政EMS | OAuth2 鉴权 |
+| `sf` | 顺丰速运 | 签名鉴权 |
+| `yunda` | 韵达快递 | 签名鉴权 |
+| `zto` | 中通快递 | 签名鉴权 |
+| `sto` | 申通快递 | 签名鉴权 |
+| `cainiao` | 菜鸟网络 | 需 PartnerId |
+
+### 国际物流（跨境 / 货运）
+
+| 代码 | 名称 | 鉴权方式 | 运输方式 |
+| --- | --- | --- | --- |
+| `fourpx` | 4PX递四方 | OAuth2 + MD5 签名 | 海运 / 空运 |
+| `sf_international` | 顺丰国际 | HMAC-SHA256 签名 | 海运 / 空运 |
+| `dhl` | DHL国际 | HTTP Basic | 空运为主 |
+| `yunexpress` | 云途物流 | HMAC-SHA256 签名 | 海运 / 空运 |
+| `ems_international` | EMS国际 | MD5 签名 | 海运 / 空运 |
+| `yanwen` | 燕文物流 | MD5 签名 | 海运 / 空运 |
+
+国际物流客户端统一继承 `International\AbstractInternationalClient`，提供：
+
+- `sendShipment()` 下单（含海关申报要素）
+- `createSeaFreight()` / `createAirFreight()` 海运 / 空运便捷入口
+- `getQuotation()` 运费报价
+- `declareCustoms()` 海关申报
+- `queryCustoms()` 清关查询
+- `queryOrder()` / `queryTracking()` / `cancelOrder()` / `printLabel()` 标准能力
+
+> 注：各服务商真实接口路径与字段以签约后的开放平台文档为准，SDK 已提供标准鉴权与传输骨架，接入时按文档核对即可。
+
+- 计划支持：京东快递、快递100、快递鸟、聚合快递，以及国内货运（德邦、安能等）模块
 
 ## 各快递公司特定配置参数
 

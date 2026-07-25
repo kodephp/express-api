@@ -18,7 +18,10 @@ class ExpressApiClientMenuTest extends TestCase
         $this->assertSame(ExpressApiClient::VERSION, $menu['version']);
         $this->assertArrayHasKey('couriers', $menu);
 
-        $expected = ['ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao', 'international'];
+        $expected = [
+            'ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao',
+            'fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen',
+        ];
         $this->assertSame($expected, array_keys($menu['couriers']));
 
         foreach ($menu['couriers'] as $courier) {
@@ -34,7 +37,6 @@ class ExpressApiClientMenuTest extends TestCase
         $menu = ExpressApiClient::getApiMenu('ems');
         $ops = $menu['couriers']['ems']['operations'];
 
-        // EMS 应支持完整的面单与批量能力
         $this->assertArrayHasKey('batchQueryTracking', $ops['query']);
         $this->assertArrayHasKey('batchPrintLabels', $ops['label']);
         $this->assertArrayHasKey('getLabelTemplate', $ops['label']);
@@ -47,12 +49,10 @@ class ExpressApiClientMenuTest extends TestCase
         $menu = ExpressApiClient::getApiMenu('yunda');
         $ops = $menu['couriers']['yunda']['operations'];
 
-        // Yunda 不支持批量轨迹查询与面单模板/批量打印
         $this->assertArrayNotHasKey('batchQueryTracking', $ops['query'] ?? []);
         $this->assertArrayNotHasKey('batchPrintLabels', $ops['label'] ?? []);
         $this->assertArrayNotHasKey('getLabelTemplate', $ops['label'] ?? []);
 
-        // 但基础下单/查询/轨迹/面单应存在
         $this->assertArrayHasKey('sendShipment', $ops['order']);
         $this->assertArrayHasKey('queryOrder', $ops['query']);
         $this->assertArrayHasKey('printLabel', $ops['label']);
@@ -63,7 +63,6 @@ class ExpressApiClientMenuTest extends TestCase
         $menu = ExpressApiClient::getApiMenu('cainiao');
         $ops = $menu['couriers']['cainiao']['operations'];
 
-        // 菜鸟特有接口应被发现
         $this->assertArrayHasKey('createOrder', $ops['order']);
         $this->assertArrayHasKey('batchCreateOrder', $ops['order']);
         $this->assertArrayHasKey('createPickup', $ops['order']);
@@ -81,7 +80,6 @@ class ExpressApiClientMenuTest extends TestCase
         $this->assertArrayHasKey('query', $ops);
         $this->assertArrayHasKey('label', $ops);
 
-        // 每个分类下的操作带有 label 元数据
         foreach ($ops as $category => $methods) {
             foreach ($methods as $method => $meta) {
                 $this->assertArrayHasKey('label', $meta);
@@ -92,9 +90,9 @@ class ExpressApiClientMenuTest extends TestCase
 
     public function testGetApiMenuSingleCourier(): void
     {
-        $menu = ExpressApiClient::getApiMenu('sf');
-        $this->assertSame(['sf'], array_keys($menu['couriers']));
-        $this->assertSame('顺丰速运', $menu['couriers']['sf']['name']);
+        $menu = ExpressApiClient::getApiMenu('dhl');
+        $this->assertSame(['dhl'], array_keys($menu['couriers']));
+        $this->assertSame('DHL国际', $menu['couriers']['dhl']['name']);
     }
 
     public function testGetApiMenuInvalidCourierThrows(): void
@@ -117,10 +115,10 @@ class ExpressApiClientMenuTest extends TestCase
         $this->assertSame('customs', $catalog['declareCustoms']['category']);
     }
 
-    public function testInternationalHasFreightAndCustomsOperations(): void
+    public function testFourPxHasFreightAndCustomsOperations(): void
     {
-        $menu = ExpressApiClient::getApiMenu('international');
-        $ops = $menu['couriers']['international']['operations'];
+        $menu = ExpressApiClient::getApiMenu('fourpx');
+        $ops = $menu['couriers']['fourpx']['operations'];
 
         // 国际物流独有的海运 / 空运 / 报价能力
         $this->assertArrayHasKey('freight', $ops);

@@ -44,11 +44,27 @@ abstract class AbstractCourierConfig extends AbstractConfig
      *
      * @return string
      */
+    /**
+     * 拼接「Host + 版本号」基础地址
+     *
+     * 版本号为空（如部分国际物流开放平台，接口路径已自带前缀）时返回 Host 本身，
+     * 不再追加多余的斜杠，保证端点拼接干净。
+     *
+     * @param string $host
+     * @return string
+     */
+    private function buildVersionedHost(string $host): string
+    {
+        $host = rtrim($host, '/');
+        $version = $this->getVersion();
+        return $version === '' ? $host : $host . '/' . ltrim($version, '/');
+    }
+
     public function getBaseUrl(): string
     {
         $host = $this->isSandbox() ? $this->getSandboxHost() : $this->getProductionHost();
 
-        return rtrim($host, '/') . '/' . ltrim($this->getVersion(), '/');
+        return $this->buildVersionedHost($host);
     }
 
     /**
@@ -58,7 +74,7 @@ abstract class AbstractCourierConfig extends AbstractConfig
      */
     public function getSandboxUrl(): string
     {
-        return rtrim($this->getSandboxHost(), '/') . '/' . ltrim($this->getVersion(), '/') . '/';
+        return $this->buildVersionedHost($this->getSandboxHost()) . '/';
     }
 
     /**
@@ -68,7 +84,7 @@ abstract class AbstractCourierConfig extends AbstractConfig
      */
     public function getProductionUrl(): string
     {
-        return rtrim($this->getProductionHost(), '/') . '/' . ltrim($this->getVersion(), '/') . '/';
+        return $this->buildVersionedHost($this->getProductionHost()) . '/';
     }
 
     /**

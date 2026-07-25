@@ -15,8 +15,18 @@ use Kode\ExpressApi\Sto\Client as StoClient;
 use Kode\ExpressApi\Sto\Config as StoConfig;
 use Kode\ExpressApi\Cainiao\Client as CainiaoClient;
 use Kode\ExpressApi\Cainiao\Config as CainiaoConfig;
-use Kode\ExpressApi\International\Client as InternationalClient;
-use Kode\ExpressApi\International\Config as InternationalConfig;
+use Kode\ExpressApi\FourPx\Client as FourPxClient;
+use Kode\ExpressApi\FourPx\Config as FourPxConfig;
+use Kode\ExpressApi\SfInternational\Client as SfInternationalClient;
+use Kode\ExpressApi\SfInternational\Config as SfInternationalConfig;
+use Kode\ExpressApi\Dhl\Client as DhlClient;
+use Kode\ExpressApi\Dhl\Config as DhlConfig;
+use Kode\ExpressApi\YunExpress\Client as YunExpressClient;
+use Kode\ExpressApi\YunExpress\Config as YunExpressConfig;
+use Kode\ExpressApi\EmsInternational\Client as EmsInternationalClient;
+use Kode\ExpressApi\EmsInternational\Config as EmsInternationalConfig;
+use Kode\ExpressApi\Yanwen\Client as YanwenClient;
+use Kode\ExpressApi\Yanwen\Config as YanwenConfig;
 
 /**
  * 通用快递API客户端
@@ -30,7 +40,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '1.5.0';
+    public const VERSION = '2.0.0';
 
     /**
      * 支持的快递公司列表
@@ -68,10 +78,35 @@ class ExpressApiClient
             'client' => CainiaoClient::class,
             'config' => CainiaoConfig::class
         ],
-        'international' => [
-            'name' => '国际物流',
-            'client' => InternationalClient::class,
-            'config' => InternationalConfig::class
+        'fourpx' => [
+            'name' => '4PX递四方',
+            'client' => FourPxClient::class,
+            'config' => FourPxConfig::class
+        ],
+        'sf_international' => [
+            'name' => '顺丰国际',
+            'client' => SfInternationalClient::class,
+            'config' => SfInternationalConfig::class
+        ],
+        'dhl' => [
+            'name' => 'DHL国际',
+            'client' => DhlClient::class,
+            'config' => DhlConfig::class
+        ],
+        'yunexpress' => [
+            'name' => '云途物流',
+            'client' => YunExpressClient::class,
+            'config' => YunExpressConfig::class
+        ],
+        'ems_international' => [
+            'name' => 'EMS国际',
+            'client' => EmsInternationalClient::class,
+            'config' => EmsInternationalConfig::class
+        ],
+        'yanwen' => [
+            'name' => '燕文物流',
+            'client' => YanwenClient::class,
+            'config' => YanwenConfig::class
         ]
     ];
 
