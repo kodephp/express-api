@@ -35,17 +35,19 @@ interface ClientInterface
      * 取消订单
      *
      * @param string $orderId 订单ID
+     * @param string $reason  取消原因
      * @return array
      */
-    public function cancelOrder(string $orderId): array;
+    public function cancelOrder(string $orderId, string $reason = ''): array;
 
     /**
      * 查询轨迹
      *
      * @param string $trackingNumber 运单号
+     * @param string $language        语言（zh-CN, en-US）
      * @return array
      */
-    public function queryTracking(string $trackingNumber): array;
+    public function queryTracking(string $trackingNumber, string $language = 'zh-CN'): array;
 
     /**
      * 拦截件

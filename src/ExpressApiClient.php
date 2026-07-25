@@ -24,6 +24,13 @@ use Kode\ExpressApi\Cainiao\Config as CainiaoConfig;
 class ExpressApiClient
 {
     /**
+     * 当前 SDK 版本号（语义化版本）
+     *
+     * @var string
+     */
+    public const VERSION = '1.2.0';
+
+    /**
      * 支持的快递公司列表
      *
      * @var array

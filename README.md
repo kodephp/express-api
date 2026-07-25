@@ -9,7 +9,7 @@
 - 灵活的面单布局管理，支持可视化编辑
 - 完善的错误处理和响应标准化
 - 支持PSR-12代码规范
-- 支持PHP 7.4+
+- 支持PHP 8.3+
 - 支持多语言字段配置
 - 丰富的测试用例，测试覆盖率高
 
@@ -390,175 +390,161 @@ $response = $cainiaoClient->pickupNotice($pickupData);
 ### 4. 订单查询
 
 ```php
-// 查询订单
-$orderData = [
-    'order_no' => 'ORD001',
-];
+// 查询订单（参数为订单ID字符串）
+$orderId = 'ORD001';
 
 // EMS订单查询
-$response = $emsClient->queryOrder($orderData);
+$response = $emsClient->queryOrder($orderId);
 
 // 顺丰订单查询
-$response = $sfClient->queryOrder($orderData);
+$response = $sfClient->queryOrder($orderId);
 
 // 韵达订单查询
-$response = $yundaClient->queryOrder($orderData);
+$response = $yundaClient->queryOrder($orderId);
 
 // 中通订单查询
-$response = $ztoClient->queryOrder($orderData);
+$response = $ztoClient->queryOrder($orderId);
 
 // 申通订单查询
-$response = $stoClient->queryOrder($orderData);
+$response = $stoClient->queryOrder($orderId);
 
 // 菜鸟网络订单查询
-$response = $cainiaoClient->queryOrder($orderData);
+$response = $cainiaoClient->queryOrder($orderId);
 ```
 
 ### 5. 批量查询订单
 
 ```php
-// 批量查询订单
-$batchOrderData = [
-    ['order_no' => 'ORD001'],
-    ['order_no' => 'ORD002'],
-];
+// 批量查询订单（参数为订单ID字符串数组）
+$orderIds = ['ORD001', 'ORD002'];
 
 // EMS批量查询订单
-$response = $emsClient->batchQueryOrders($batchOrderData);
+$response = $emsClient->batchQueryOrders($orderIds);
 
 // 顺丰批量查询订单
-$response = $sfClient->batchQueryOrders($batchOrderData);
+$response = $sfClient->batchQueryOrders($orderIds);
 
 // 韵达批量查询订单
-$response = $yundaClient->batchQueryOrders($batchOrderData);
+$response = $yundaClient->batchQueryOrders($orderIds);
 
 // 中通批量查询订单
-$response = $ztoClient->batchQueryOrders($batchOrderData);
+$response = $ztoClient->batchQueryOrders($orderIds);
 
 // 申通批量查询订单
-$response = $stoClient->batchQueryOrders($batchOrderData);
+$response = $stoClient->batchQueryOrders($orderIds);
 
 // 菜鸟网络批量查询订单
-$response = $cainiaoClient->batchQueryOrders($batchOrderData);
+$response = $cainiaoClient->batchQueryOrders($orderIds);
 ```
 
 ### 6. 取消订单
 
 ```php
-// 取消订单
-$cancelData = [
-    'order_no' => 'ORD001',
-    'cancel_reason' => '客户取消',
-];
+// 取消订单（参数：订单ID，可选取消原因）
+$orderId = 'ORD001';
+$reason = '客户取消';
 
 // EMS取消订单
-$response = $emsClient->cancelOrder($cancelData);
+$response = $emsClient->cancelOrder($orderId, $reason);
 
 // 顺丰取消订单
-$response = $sfClient->cancelOrder($cancelData);
+$response = $sfClient->cancelOrder($orderId, $reason);
 
 // 韵达取消订单
-$response = $yundaClient->cancelOrder($cancelData);
+$response = $yundaClient->cancelOrder($orderId, $reason);
 
 // 中通取消订单
-$response = $ztoClient->cancelOrder($cancelData);
+$response = $ztoClient->cancelOrder($orderId, $reason);
 
 // 申通取消订单
-$response = $stoClient->cancelOrder($cancelData);
+$response = $stoClient->cancelOrder($orderId, $reason);
 
 // 菜鸟网络取消订单
-$response = $cainiaoClient->cancelOrder($cancelData);
+$response = $cainiaoClient->cancelOrder($orderId, $reason);
 ```
 
 ### 7. 轨迹查询
 
 ```php
-// 查询轨迹
-$trackingData = [
-    'tracking_no' => 'SF1234567890',
-];
+// 查询轨迹（参数：运单号，可选语言）
+$trackingNo = 'SF1234567890';
 
 // EMS轨迹查询
-$response = $emsClient->queryTracking($trackingData);
+$response = $emsClient->queryTracking($trackingNo);
 
 // 顺丰轨迹查询
-$response = $sfClient->queryTracking($trackingData);
+$response = $sfClient->queryTracking($trackingNo);
 
 // 韵达轨迹查询
-$response = $yundaClient->queryTracking($trackingData);
+$response = $yundaClient->queryTracking($trackingNo);
 
 // 中通轨迹查询
-$response = $ztoClient->queryTracking($trackingData);
+$response = $ztoClient->queryTracking($trackingNo);
 
 // 申通轨迹查询
-$response = $stoClient->queryTracking($trackingData);
+$response = $stoClient->queryTracking($trackingNo);
 
 // 菜鸟网络轨迹查询
-$response = $cainiaoClient->queryTracking($trackingData);
+$response = $cainiaoClient->queryTracking($trackingNo);
 ```
 
 ### 8. 批量轨迹查询
 
 ```php
-// 批量查询轨迹
-$batchTrackingData = [
-    ['tracking_no' => 'SF1234567890'],
-    ['tracking_no' => 'SF0987654321'],
-];
+// 批量查询轨迹（参数为运单号字符串数组）
+$trackingNumbers = ['SF1234567890', 'SF0987654321'];
 
 // EMS批量轨迹查询
-$response = $emsClient->batchQueryTracking($batchTrackingData);
+$response = $emsClient->batchQueryTracking($trackingNumbers);
 
 // 顺丰批量轨迹查询
-$response = $sfClient->batchQueryTracking($batchTrackingData);
+$response = $sfClient->batchQueryTracking($trackingNumbers);
 
 // 韵达批量轨迹查询
-$response = $yundaClient->batchQueryTracking($batchTrackingData);
+$response = $yundaClient->batchQueryTracking($trackingNumbers);
 
 // 中通批量轨迹查询
-$response = $ztoClient->batchQueryTracking($batchTrackingData);
+$response = $ztoClient->batchQueryTracking($trackingNumbers);
 
 // 申通批量轨迹查询
-$response = $stoClient->batchQueryTracking($batchTrackingData);
+$response = $stoClient->batchQueryTracking($trackingNumbers);
 
 // 菜鸟网络批量轨迹查询
-$response = $cainiaoClient->batchQueryTracking($batchTrackingData);
+$response = $cainiaoClient->batchQueryTracking($trackingNumbers);
 ```
 
 ### 9. 拦截件
 
 ```php
-// 拦截件
-$interceptData = [
-    'tracking_no' => 'SF1234567890',
-    'reason' => '发错地址',
-];
+// 拦截件（参数：订单ID + 可选拦截数据数组）
+$orderId = 'ORD001';
+$interceptData = ['reason' => '发错地址'];
 
 // EMS拦截件
-$response = $emsClient->intercept($interceptData);
+$response = $emsClient->intercept($orderId, $interceptData);
 
 // 顺丰拦截件
-$response = $sfClient->intercept($interceptData);
+$response = $sfClient->intercept($orderId, $interceptData);
 
 // 韵达拦截件
-$response = $yundaClient->intercept($interceptData);
+$response = $yundaClient->intercept($orderId, $interceptData);
 
 // 中通拦截件
-$response = $ztoClient->intercept($interceptData);
+$response = $ztoClient->intercept($orderId, $interceptData);
 
 // 申通拦截件
-$response = $stoClient->intercept($interceptData);
+$response = $stoClient->intercept($orderId, $interceptData);
 
 // 菜鸟网络拦截件
-$response = $cainiaoClient->intercept($interceptData);
+$response = $cainiaoClient->intercept($orderId, $interceptData);
 ```
 
 ### 10. 改件信息
 
 ```php
-// 修改订单信息
+// 改件信息（参数：订单ID + 修改数据数组）
+$orderId = 'ORD001';
 $modifyData = [
-    'tracking_no' => 'SF1234567890',
     'new_address' => [
         'name' => '王五',
         'phone' => '13700137000',
@@ -570,84 +556,82 @@ $modifyData = [
 ];
 
 // EMS改件信息
-$response = $emsClient->modify($modifyData);
+$response = $emsClient->modify($orderId, $modifyData);
 
 // 顺丰改件信息
-$response = $sfClient->modify($modifyData);
+$response = $sfClient->modify($orderId, $modifyData);
 
 // 韵达改件信息
-$response = $yundaClient->modify($modifyData);
+$response = $yundaClient->modify($orderId, $modifyData);
 
 // 中通改件信息
-$response = $ztoClient->modify($modifyData);
+$response = $ztoClient->modify($orderId, $modifyData);
 
 // 申通改件信息
-$response = $stoClient->modify($modifyData);
+$response = $stoClient->modify($orderId, $modifyData);
 
 // 菜鸟网络改件信息
-$response = $cainiaoClient->modify($modifyData);
+$response = $cainiaoClient->modify($orderId, $modifyData);
 ```
 
 ### 11. 面单打印
 
 ```php
-// 面单打印
+// 面单打印（参数：订单ID + 可选面单配置数组）
+$orderId = 'ORD001';
 $printData = [
-    'order_no' => 'ORD001',
     'template_config' => [
         // 面单配置...
     ],
 ];
 
 // EMS面单打印
-$response = $emsClient->printLabel($printData);
+$response = $emsClient->printLabel($orderId, $printData);
 
 // 顺丰面单打印
-$response = $sfClient->printLabel($printData);
+$response = $sfClient->printLabel($orderId, $printData);
 
 // 韵达面单打印
-$response = $yundaClient->printLabel($printData);
+$response = $yundaClient->printLabel($orderId, $printData);
 
 // 中通面单打印
-$response = $ztoClient->printLabel($printData);
+$response = $ztoClient->printLabel($orderId, $printData);
 
 // 申通面单打印
-$response = $stoClient->printLabel($printData);
+$response = $stoClient->printLabel($orderId, $printData);
 
 // 菜鸟网络面单打印
-$response = $cainiaoClient->printLabel($printData);
+$response = $cainiaoClient->printLabel($orderId, $printData);
 ```
 
 ### 12. 批量面单打印
 
 ```php
-// 批量面单打印
-$batchPrintData = [
-    [
-        'order_no' => 'ORD001',
-        'template_config' => [
-            // 面单配置...
-        ],
+// 批量面单打印（参数：订单ID字符串数组 + 可选打印配置）
+$orderIds = ['ORD001', 'ORD002'];
+$printData = [
+    'template_config' => [
+        // 面单配置...
     ],
 ];
 
 // EMS批量面单打印
-$response = $emsClient->batchPrintLabels($batchPrintData);
+$response = $emsClient->batchPrintLabels($orderIds, $printData);
 
 // 顺丰批量面单打印
-$response = $sfClient->batchPrintLabels($batchPrintData);
+$response = $sfClient->batchPrintLabels($orderIds, $printData);
 
 // 韵达批量面单打印
-$response = $yundaClient->batchPrintLabels($batchPrintData);
+$response = $yundaClient->batchPrintLabels($orderIds, $printData);
 
 // 中通批量面单打印
-$response = $ztoClient->batchPrintLabels($batchPrintData);
+$response = $ztoClient->batchPrintLabels($orderIds, $printData);
 
 // 申通批量面单打印
-$response = $stoClient->batchPrintLabels($batchPrintData);
+$response = $stoClient->batchPrintLabels($orderIds, $printData);
 
 // 菜鸟网络批量面单打印
-$response = $cainiaoClient->batchPrintLabels($batchPrintData);
+$response = $cainiaoClient->batchPrintLabels($orderIds, $printData);
 ```
 
 ## 面单布局功能设计
@@ -1138,13 +1122,12 @@ $cainiaoConfig = [
 
 ## 技术依赖
 
-- PHP 7.4+
-- GuzzleHttp（HTTP客户端）
+- PHP 8.3+
 - PHPUnit 12（测试框架）
 
 ## 许可证
 
-Apache License 2.0
+MIT License
 
 ## 贡献
 

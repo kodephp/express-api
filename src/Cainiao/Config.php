@@ -2,12 +2,12 @@
 
 namespace Kode\ExpressApi\Cainiao;
 
-use Kode\ExpressApi\Common\AbstractConfig;
+use Kode\ExpressApi\Common\AbstractCourierConfig;
 
 /**
- * 菜鸟网络API 配置类
+ * 菜鸟网络 API 配置类
  */
-class Config extends AbstractConfig
+class Config extends AbstractCourierConfig
 {
     /**
      * 默认配置
@@ -15,106 +15,64 @@ class Config extends AbstractConfig
      * @var array
      */
     protected $defaults = [
-        'app_key' => '',
-        'app_secret' => '',
-        'access_token' => '',
-        'partner_id' => '',
-        'sandbox' => false,
-        'timeout' => 30,
-        'version' => 'v1',
+        'app_key'               => '',
+        'app_secret'            => '',
+        'access_token'          => '',
+        'partner_id'            => '',
+        'default_courier_code'  => '',
+        'default_template_code' => '',
+        'sandbox'               => false,
+        'timeout'               => 30,
+        'version'               => 'v1',
     ];
 
     /**
-     * 获取API版本
+     * 生产环境 Host
      *
      * @return string
      */
-    public function getVersion(): string
+    protected function getProductionHost(): string
     {
-        return $this->get('version', 'v1');
+        return 'https://api-cainiao.openapi.alibaba.com';
     }
 
     /**
-     * 获取基础URL
+     * 沙箱环境 Host
      *
      * @return string
      */
-    public function getBaseUrl(): string
+    protected function getSandboxHost(): string
     {
-        return $this->isSandbox() ?
-            'https://api-cainiao-sandbox.openapi.alibaba.com/' . $this->getVersion() :
-            'https://api-cainiao.openapi.alibaba.com/' . $this->getVersion();
+        return 'https://api-cainiao-sandbox.openapi.alibaba.com';
     }
 
     /**
-     * 获取沙箱环境URL
-     *
-     * @return string
-     */
-    public function getSandboxUrl(): string
-    {
-        return 'https://api-cainiao-sandbox.openapi.alibaba.com/' . $this->getVersion() . '/';
-    }
-
-    /**
-     * 获取生产环境URL
-     *
-     * @return string
-     */
-    public function getProductionUrl(): string
-    {
-        return 'https://api-cainiao.openapi.alibaba.com/' . $this->getVersion() . '/';
-    }
-
-    /**
-     * 获取应用密钥
-     *
-     * @return string
-     */
-    public function getAppKey(): string
-    {
-        return $this->get('app_key', '');
-    }
-
-    /**
-     * 获取应用密钥
-     *
-     * @return string
-     */
-    public function getAppSecret(): string
-    {
-        return $this->get('app_secret', '');
-    }
-
-    /**
-     * 获取访问令牌
-     *
-     * @return string
-     */
-    public function getAccessToken(): string
-    {
-        return $this->get('access_token', '');
-    }
-
-    /**
-     * 设置访问令牌
-     *
-     * @param string|null $accessToken
-     * @return $this
-     */
-    public function setAccessToken(?string $accessToken): self
-    {
-        $this->set('access_token', $accessToken ?? '');
-        return $this;
-    }
-
-    /**
-     * 获取合作伙伴ID
+     * 获取合作伙伴 ID
      *
      * @return string
      */
     public function getPartnerId(): string
     {
         return $this->get('partner_id', '');
+    }
+
+    /**
+     * 获取默认快递公司编码（用于轨迹查询）
+     *
+     * @return string
+     */
+    public function getDefaultCourierCode(): string
+    {
+        return $this->get('default_courier_code', '');
+    }
+
+    /**
+     * 获取默认面单模板编码（用于面单打印）
+     *
+     * @return string
+     */
+    public function getDefaultTemplateCode(): string
+    {
+        return $this->get('default_template_code', '');
     }
 }

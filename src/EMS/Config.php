@@ -108,16 +108,6 @@ class Config extends AbstractConfig
     }
 
     /**
-     * 获取是否使用沙箱环境
-     *
-     * @return bool
-     */
-    public function isSandbox(): bool
-    {
-        return $this->get('sandbox', false);
-    }
-
-    /**
      * 设置超时时间
      *
      * @param int $timeout 超时时间
@@ -129,16 +119,6 @@ class Config extends AbstractConfig
     }
 
     /**
-     * 获取超时时间
-     *
-     * @return int
-     */
-    public function getTimeout(): int
-    {
-        return $this->get('timeout', 30);
-    }
-
-    /**
      * 设置API版本
      *
      * @param string $version API版本
@@ -147,16 +127,6 @@ class Config extends AbstractConfig
     public function setVersion(string $version): self
     {
         return $this->set('version', $version);
-    }
-
-    /**
-     * 获取API版本
-     *
-     * @return string
-     */
-    public function getVersion(): string
-    {
-        return $this->get('version', 'v1');
     }
 
     /**

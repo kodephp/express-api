@@ -6,6 +6,8 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use Kode\ExpressApi\Label\Template;
+use Kode\ExpressApi\Label\AdvancedLayoutManager;
 use Kode\ExpressApi\Label\Visualizer\LabelVisualizer;
 
 /**
@@ -135,7 +137,9 @@ $templateConfig = [
 ];
 
 // 创建LabelVisualizer实例
-$visualizer = new LabelVisualizer($templateConfig);
+$template = new Template($templateConfig);
+$layoutManager = new AdvancedLayoutManager(sys_get_temp_dir() . '/ems_label_templates_' . uniqid());
+$visualizer = new LabelVisualizer($template, $layoutManager);
 
 // 方法1: 生成简单的HTML预览
 $htmlPreview = $visualizer->generateHtmlPreview($sampleData);

@@ -16,37 +16,47 @@ class AdvancedLayoutManagerTest extends TestCase
     
     protected function setUp(): void
     {
-        // 设置测试目录
-        $this->templateDir = __DIR__ . '/../../examples/templates';
-        $this->exportDir = __DIR__ . '/../../examples/exports';
-        
-        // 确保目录存在
-        if (!is_dir($this->templateDir)) {
-            mkdir($this->templateDir, 0777, true);
+        // 使用独立临时目录作为模板/导出存储，避免污染 examples/ 与仓库
+        $runId = getmypid() ?: time();
+        $this->templateDir = sys_get_temp_dir() . '/ems_api_templates_' . $runId;
+        $this->exportDir = sys_get_temp_dir() . '/ems_api_exports_' . $runId;
+
+        foreach ([$this->templateDir, $this->exportDir] as $dir) {
+            if (is_dir($dir)) {
+                self::removeDir($dir);
+            }
+            mkdir($dir, 0777, true);
         }
-        
-        if (!is_dir($this->exportDir)) {
-            mkdir($this->exportDir, 0777, true);
-        }
-        
+
         // 初始化布局管理器
         $this->layoutManager = new AdvancedLayoutManager($this->templateDir);
     }
-    
+
     protected function tearDown(): void
     {
-        // 清理测试创建的文件
-        $testFiles = [
-            $this->templateDir . '/test_template_001.json',
-            $this->templateDir . '/test_template_002.json',
-            $this->exportDir . '/test_export.json'
-        ];
-        
-        foreach ($testFiles as $file) {
-            if (file_exists($file)) {
-                unlink($file);
+        // 彻底清理本次测试使用的临时目录，避免残留污染仓库
+        self::removeDir($this->templateDir);
+        self::removeDir($this->exportDir);
+    }
+
+    /**
+     * 递归删除目录
+     */
+    private static function removeDir(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        $items = array_diff(scandir($dir), ['.', '..']);
+        foreach ($items as $item) {
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($path)) {
+                self::removeDir($path);
+            } else {
+                unlink($path);
             }
         }
+        rmdir($dir);
     }
     
     public function testConstructor()

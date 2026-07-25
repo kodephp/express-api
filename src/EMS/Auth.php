@@ -4,6 +4,7 @@ namespace Kode\ExpressApi\EMS;
 
 use Kode\ExpressApi\Common\AuthInterface;
 use Kode\ExpressApi\Common\Exception\ExpressApiException;
+use Kode\ExpressApi\Common\HttpClient;
 
 /**
  * EMS API 认证类
@@ -67,47 +68,30 @@ class Auth implements AuthInterface
     {
         $url = $this->config->getBaseUrl() . '/auth/token';
 
-        $curl = curl_init();
-
         $postData = [
-            'grant_type' => 'client_credentials',
-            'client_id' => $this->config->getAppKey(),
+            'grant_type'    => 'client_credentials',
+            'client_id'     => $this->config->getAppKey(),
             'client_secret' => $this->config->getAppSecret(),
         ];
 
-        curl_setopt_array($curl, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => $this->config->getTimeout(),
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($postData),
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/x-www-form-urlencoded',
-            ],
-        ]);
+        $response = HttpClient::request(
+            'POST',
+            $url,
+            $postData,
+            ['Content-Type' => 'application/x-www-form-urlencoded'],
+            $this->config->getTimeout()
+        );
 
-        $response = curl_exec($curl);
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        $error = curl_error($curl);
-
-        curl_close($curl);
-
-        if ($error) {
-            throw new ExpressApiException('获取访问令牌失败: ' . $error);
-        }
-
-        $result = json_decode($response, true);
-
-        if ($httpCode >= 400 || !isset($result['access_token'])) {
+        if (!isset($response['access_token'])) {
             throw new ExpressApiException(
-                '获取访问令牌失败: ' . ($result['message'] ?? '未知错误'),
-                $httpCode,
+                '获取访问令牌失败: ' . ($response['message'] ?? '未知错误'),
+                0,
                 null,
-                $result
+                $response
             );
         }
 
-        return $result;
+        return $response;
     }
 
     /**

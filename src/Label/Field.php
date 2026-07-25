@@ -198,6 +198,11 @@ class Field
     protected $rotation = 0;
 
     /**
+     * @var string|null 图片路径（图片类型字段）
+     */
+    protected $imagePath;
+
+    /**
      * 构造函数
      *
      * @param string $id 字段ID
