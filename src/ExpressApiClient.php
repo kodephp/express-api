@@ -46,7 +46,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '2.1.0';
+    public const VERSION = '2.2.0';
 
     /**
      * 支持的快递公司列表
@@ -312,6 +312,95 @@ class ExpressApiClient
     public static function getOperationCatalog(): array
     {
         return self::OPERATIONS;
+    }
+
+    /**
+     * 获取当前 SDK 版本号
+     *
+     * @return string
+     */
+    public static function version(): string
+    {
+        return self::VERSION;
+    }
+
+    /**
+     * 批量轨迹查询（跨快递商聚合）
+     *
+     * 接收一组「快递商 + 运单号」条目，逐单调用对应客户端的 queryTracking，
+     * 单条失败相互隔离（不中断其余查询），最终汇总为 results / success / failed。
+     *
+     * @param array  $items    查询条目列表，每条：['courier' => 'ems', 'number' => '运单号']
+     * @param string $language 轨迹语言（zh-CN, en-US），透传给各客户端
+     * @return array ['results' => [...], 'success' => int, 'failed' => int]
+     * @throws \InvalidArgumentException
+     */
+    public static function batchQueryTracking(array $items, string $language = 'zh-CN'): array
+    {
+        if (empty($items)) {
+            throw new \InvalidArgumentException('批量轨迹查询条目不能为空');
+        }
+
+        $results = [];
+        $success = 0;
+        $failed = 0;
+
+        foreach ($items as $index => $item) {
+            $courier = strtolower((string) ($item['courier'] ?? ''));
+            $number = (string) ($item['number'] ?? '');
+
+            if ($courier === '' || $number === '') {
+                $failed++;
+                $results[] = [
+                    'index'   => $index,
+                    'courier' => $courier,
+                    'number'  => $number,
+                    'ok'      => false,
+                    'error'   => '条目缺少 courier 或 number',
+                ];
+                continue;
+            }
+
+            if (!self::isCourierSupported($courier)) {
+                $failed++;
+                $results[] = [
+                    'index'   => $index,
+                    'courier' => $courier,
+                    'number'  => $number,
+                    'ok'      => false,
+                    'error'   => "不支持的快递公司: {$courier}",
+                ];
+                continue;
+            }
+
+            try {
+                $client = self::create($courier, []);
+                $data = $client->queryTracking($number, $language);
+                $success++;
+                $results[] = [
+                    'index'   => $index,
+                    'courier' => $courier,
+                    'number'  => $number,
+                    'ok'      => true,
+                    'data'    => $data,
+                ];
+            } catch (\Throwable $e) {
+                $failed++;
+                $results[] = [
+                    'index'   => $index,
+                    'courier' => $courier,
+                    'number'  => $number,
+                    'ok'      => false,
+                    'error'   => $e->getMessage(),
+                ];
+            }
+        }
+
+        return [
+            'results' => $results,
+            'success' => $success,
+            'failed'  => $failed,
+        ];
     }
 
     /**

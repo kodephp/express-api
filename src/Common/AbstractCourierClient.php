@@ -116,8 +116,8 @@ abstract class AbstractCourierClient implements ClientInterface
                 $this->config->getTimeout()
             );
 
-            // 使用通用响应处理器处理响应
-            return ResponseHandler::handle($response, $this->getProvider());
+            // 使用通用响应处理器处理响应（子类可经 parseResponse 覆盖策略）
+            return $this->parseResponse($response);
         } catch (\Exception $e) {
             if ($e instanceof ExpressApiException) {
                 throw $e;
@@ -136,5 +136,20 @@ abstract class AbstractCourierClient implements ClientInterface
     protected function prepareRequestHeaders(array $headers): array
     {
         return $headers;
+    }
+
+    /**
+     * 响应归一化钩子
+     *
+     * 统一委托给 ResponseHandler（按 provider 注册的错误判定 / 数据解包策略），
+     * 子类如需对特定响应结构做额外处理，可重写本方法。
+     *
+     * @param array $response 原始响应
+     * @return array
+     * @throws ExpressApiException
+     */
+    protected function parseResponse(array $response): array
+    {
+        return ResponseHandler::handle($response, $this->getProvider());
     }
 }

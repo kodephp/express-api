@@ -9,9 +9,12 @@
   - 国内货运：德邦物流、安能物流、天地华宇（零担 / 整车 / 快运，支持网点查询、运费报价）
   - 国际物流：4PX递四方、顺丰国际、DHL国际、云途物流、EMS国际、燕文物流
     （支持海运 / 空运下单、海关申报、清关查询、运费报价）
-- 当前版本：v2.1.0
+- 当前版本：v2.2.0
 - 统一的接口调用方式，简化开发流程
 - 灵活的面单布局管理，支持可视化编辑
+- 完善的错误处理和响应标准化（按快递商注册响应策略）
+- 传输层韧性增强：指数退避重试（瞬时故障自动重试，4xx 不重试）、连接超时、最近请求诊断
+- 跨快递商聚合能力：`batchQueryTracking()` 批量轨迹（单条失败隔离）
 - 完善的错误处理和响应标准化
 - 支持PSR-12代码规范
 - 支持PHP 8.3+
@@ -743,6 +746,77 @@ $menu = ExpressApiClient::getApiMenu();
 // $menu['couriers']['fourpx']['operations']['customs'] => ['declareCustoms','queryCustoms']
 ```
 
+## 韧性与可观测性（v2.2.0）
+
+### 失败重试（指数退避）
+
+传输层在遇到**瞬时故障**（连接错误、超时、HTTP 5xx）时会按指数退避自动重试；
+**客户端错误（HTTP 4xx）视为终态，不重试**。默认关闭重试，可在进程启动时全局开启：
+
+```php
+use Kode\ExpressApi\Common\HttpClient;
+
+// 额外重试 2 次，基础延迟 200ms（实际延迟 200ms / 400ms）
+HttpClient::setRetry(2, 200);
+
+// 关闭重试（默认）
+HttpClient::setRetry(0);
+```
+
+> 重试为全局静态配置，作用于全部 15 家快递商。SSL 强制校验默认开启，可用 `HttpClient::setVerifySsl(false)` 关闭（仅测试/内网自签场景）。
+
+### 响应归一化策略
+
+所有响应经由 `ResponseHandler` 按快递商（provider）注册的策略统一判定成功/失败并解包业务数据，
+避免散落在各客户端的重复判断。EMS / 顺丰已预置精确策略；其余快递商回退到保守默认策略
+（仅在 `error` 字段、`success === false`、或 `code ∈ [400,599]` 时判定失败，不擅自改包结构）。
+
+如需为某家快递商定制策略：
+
+```php
+use Kode\ExpressApi\Common\ResponseHandler;
+
+ResponseHandler::registerPolicy(
+    'my_courier',
+    static fn(array $r): bool => ($r['result'] ?? '') === 'FAIL', // 错误判定
+    static fn(array $r): array => $r['body'] ?? $r                // 数据解包
+);
+```
+
+### 跨快递商批量轨迹查询
+
+`ExpressApiClient::batchQueryTracking()` 接收「快递商 + 运单号」条目列表，逐单调用对应客户端，
+单条失败相互隔离（不中断其余查询），最终汇总 `results / success / failed`：
+
+```php
+use Kode\ExpressApi\ExpressApiClient;
+
+$result = ExpressApiClient::batchQueryTracking([
+    ['courier' => 'ems',  'number' => 'EMS123'],
+    ['courier' => 'sf',   'number' => 'SF456'],
+    ['courier' => 'dhl',  'number' => 'DHL789'],
+]);
+
+// $result['success'] => 成功条数
+// $result['failed']  => 失败条数
+// $result['results'][0] => ['index'=>0,'courier'=>'ems','number'=>'EMS123','ok'=>true,'data'=>[...]]
+```
+
+### 版本号入口
+
+```php
+echo ExpressApiClient::version(); // 例如 "2.2.0"
+```
+
+### 请求诊断
+
+无需引入日志依赖，可随时读取最近一次请求的诊断元信息（含耗时、HTTP 状态码、重试次数）：
+
+```php
+$meta = HttpClient::getLastMeta();
+// ['url'=>'...','method'=>'GET','http_code'=>200,'attempt'=>1,'duration_ms'=>37]
+```
+
 ## 面单布局功能设计
 
 ### 功能概述
@@ -1005,7 +1079,9 @@ $config = [
 
 ## 错误处理
 
-所有API调用返回的响应都遵循统一的格式：
+所有 API 调用失败都会抛出 `Kode\ExpressApi\Common\Exception\ExpressApiException`，其 `getDetails()`
+可获取原始响应体，便于排查。响应是否成功、如何解包由 `ResponseHandler` 的**按快递商策略**统一决定
+（详见上文「响应归一化策略」）。约定上的标准响应结构如下：
 
 ```php
 // 成功响应
@@ -1025,6 +1101,9 @@ $config = [
 ]
 ```
 
+瞬时网络故障（连接错误 / 超时 / 5xx）会按 `HttpClient::setRetry()` 自动重试；
+4xx 客户端错误不会重试，直接抛出 `ExpressApiException`。
+
 ## 开发指南
 
 ### 集成新的快递公司
@@ -1033,7 +1112,7 @@ $config = [
 2. 创建认证类（实现AuthInterface）
 3. 创建客户端类（实现ClientInterface）
 4. 更新ExpressApiClient.php，添加新的快递公司支持
-5. 在ResponseHandler.php中添加新的响应处理逻辑
+5. 如该快递商响应结构与通用约定不同，调用 `ResponseHandler::registerPolicy()` 注册专属的错误判定 / 数据解包策略（可选，未注册则回退保守默认策略）
 
 ### 代码规范
 
