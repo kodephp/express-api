@@ -3,6 +3,7 @@
 namespace Kode\ExpressApi\Common;
 
 use Kode\ExpressApi\Common\Exception\ExpressApiException;
+use Kode\ExpressApi\Common\Resolver\ResolverSourceInterface;
 
 /**
  * 聚合查询客户端基类
@@ -12,8 +13,11 @@ use Kode\ExpressApi\Common\Exception\ExpressApiException;
  * 聚合商不支持的方法以明确异常抛出，仅保留 queryTracking（轨迹查询）
  * 与 recognizeTracking（运单号自动识别）作为必须实现的抽象方法，
  * 既满足接口契约，又避免各聚合商重复编写相同的「不支持」桩代码。
+ *
+ * 同时实现 {@see ResolverSourceInterface}，使其可被 {@see \Kode\ExpressApi\Common\Resolver\AggregateResolver}
+ * 聚合为 CourierRecognizer 的权威回退解析源。
  */
-abstract class AbstractAggregatorClient extends AbstractCourierClient
+abstract class AbstractAggregatorClient extends AbstractCourierClient implements ResolverSourceInterface
 {
     /**
      * 发货通知（聚合商不支持）

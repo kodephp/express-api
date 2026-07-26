@@ -9,9 +9,9 @@
   - 国内货运：德邦物流、安能物流、天地华宇（零担 / 整车 / 快运，支持网点查询、运费报价）
   - 国际物流：4PX递四方、顺丰国际、DHL国际、云途物流、EMS国际、燕文物流
     （支持海运 / 空运下单、海关申报、清关查询、运费报价）
-  - 聚合查询：快递100、快递鸟、聚合数据（运单轨迹 + 运单号自动识别，作为承运商自动识别的权威回退）
-- 当前版本：v2.3.0
-- **物流链自动关联（v2.3.0）**：仅凭运单号即可 `recognize()` 自动识别承运商；给定发货意图（起止国 / 重量 / 运输方式）即可 `buildChain()` 自动拼装「揽收 → 干线 → 跨境 → 清关 → 末端」全链路，无需逐段指定承运商
+  - 聚合查询：快递100、快递鸟、聚合数据、17TRACK（运单轨迹 + 运单号自动识别，作为承运商自动识别的权威回退）
+- 当前版本：v2.4.0
+- **物流链自动关联（v2.3.0+）**：仅凭运单号即可 `recognize()` 自动识别承运商；给定发货意图（起止国 / 重量 / 运输方式）即可 `buildChain()` 自动拼装「揽收 → 干线 → 跨境 → 清关 → 末端」全链路，无需逐段指定承运商。规则未命中时，可经 `AggregateResolver` 聚合 17TRACK 等权威源做确定性回退识别
 - 统一的接口调用方式，简化开发流程
 - 灵活的面单布局管理，支持可视化编辑
 - 完善的错误处理和响应标准化（按快递商注册响应策略）
@@ -752,19 +752,27 @@ $courier = ExpressApiClient::recognize('JD0091234567890'); // => 'jd'
 ```
 
 底层由 `CourierRecognizer` 完成，内置各服务商运单号特征规则（前缀 / 长度 / 字符集）；
-规则未命中且已配置聚合解析器时，自动回退到快递100 / 快递鸟 / 聚合数据等权威解析：
+规则未命中时，可经 `AggregateResolver` 聚合 17TRACK / 快递100 / 快递鸟等已接入的权威源做确定性回退：
 
 ```php
-use Kode\ExpressApi\Common\CourierRecognizer;
+use Kode\ExpressApi\ExpressApiClient;
 
-// 注册 / 覆盖规则
-CourierRecognizer::registerPattern('my_courier', '/^MY\d{6}$/i');
-// 设置聚合解析器（权威回退）
-CourierRecognizer::setResolver(function (string $no) {
-    // 调用快递100 等聚合计费的识别接口，返回承运商代码或 null
-    return $someAggregator->recognize($no);
-});
+// 聚合已签约的聚合查询服务商，构建权威解析器（自动忽略非聚合商 / 无效配置）
+$resolver = ExpressApiClient::buildAggregateResolver([
+    'seventeentrack' => ['app_secret' => 'YOUR_17TRACK_TOKEN'],
+    'kuaidi100'      => ['app_key' => 'K', 'app_secret' => 'S'],
+]);
+
+// 方式一：注册为全局解析器（此后 recognize 自动回退）
+\Kode\ExpressApi\Common\CourierRecognizer::setResolver($resolver);
+
+// 方式二：单次识别时透传（推荐，避免全局状态）
+$courier = ExpressApiClient::recognize('UNKNOWN-INTL-999', $resolver); // => 'dhl'（示例）
 ```
+
+`AggregateResolver` 会把各家返回的**外部承运商代码**（如 17TRACK 的 `ups`、快递100 的 `shunfeng`）
+经内置别名表映射为本 SDK 的**内部承运商代码**（如 `sf`），单个聚合源失败不阻断整体。
+也可直接用 `CourierRecognizer::registerPattern()` 注册 / 覆盖规则。
 
 **2) 按发货意图自动拼装物流链** —— `ExpressApiClient::buildChain()`
 
@@ -825,7 +833,7 @@ HttpClient::setRetry(2, 200);
 HttpClient::setRetry(0);
 ```
 
-> 重试为全局静态配置，作用于全部 19 家快递商。SSL 强制校验默认开启，可用 `HttpClient::setVerifySsl(false)` 关闭（仅测试/内网自签场景）。
+> 重试为全局静态配置，作用于全部 20 家快递商。SSL 强制校验默认开启，可用 `HttpClient::setVerifySsl(false)` 关闭（仅测试/内网自签场景）。
 
 ### 响应归一化策略
 
@@ -867,7 +875,7 @@ $result = ExpressApiClient::batchQueryTracking([
 ### 版本号入口
 
 ```php
-echo ExpressApiClient::version(); // 例如 "2.3.0"
+echo ExpressApiClient::version(); // 例如 "2.4.0"
 ```
 
 ### 请求诊断
@@ -1328,12 +1336,13 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 | `kuaidi100` | 快递100 | MD5 签名 | 运单轨迹 + 智能识别承运商 |
 | `kuaidiniao` | 快递鸟 | MD5(Base64) 签名 | 运单轨迹 + 即时识别 |
 | `juhe` | 聚合数据 | API Key | 运单轨迹 + 自动判定 |
+| `seventeentrack` | 17TRACK | 17token 头 | 国际运单识别（覆盖最广，推荐作为权威回退首源） |
 
 聚合查询服务商**只提供轨迹查询与运单号自动识别**，并不承接下单 / 打单 / 拦截等实操业务；
 调用其实操方法会抛出明确的「不支持」异常。它们更重要的角色是 **`CourierRecognizer` 的权威回退解析器**：
 当运单号规则无法命中时，可将其接入为动态解析器，确定性地识别归属承运商。
 
-- 已支持：京东快递/京东物流、快递100、快递鸟、聚合数据（见上表）
+- 已支持：京东快递/京东物流、快递100、快递鸟、聚合数据、17TRACK（见上表）
 
 ## 各快递公司特定配置参数
 

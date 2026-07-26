@@ -59,10 +59,12 @@ class CourierRecognizer
     /**
      * 识别单个运单号的归属承运商
      *
-     * @param string $trackingNo 运单号
+     * @param string        $trackingNo 运单号
+     * @param callable|null $resolver   本次调用可选的解析器（覆盖全局设置），
+     *                                  签名为 callable(string): ?string
      * @return string|null 命中返回承运商代码（如 'sf'），未命中返回 null
      */
-    public static function detect(string $trackingNo): ?string
+    public static function detect(string $trackingNo, ?callable $resolver = null): ?string
     {
         $trackingNo = trim($trackingNo);
         if ($trackingNo === '') {
@@ -78,9 +80,10 @@ class CourierRecognizer
             }
         }
 
-        // 第二级：动态解析器（聚合查询回退）
-        if (self::$resolver !== null) {
-            $result = call_user_func(self::$resolver, $trackingNo);
+        // 第二级：动态解析器（聚合查询回退，优先用本次调用传入的，否则用全局设置）
+        $resolver = $resolver ?? self::$resolver;
+        if ($resolver !== null) {
+            $result = call_user_func($resolver, $trackingNo);
             if (is_string($result) && $result !== '') {
                 return strtolower($result);
             }

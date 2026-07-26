@@ -41,7 +41,11 @@ use Kode\ExpressApi\Kuaidiniao\Client as KuaidiniaoClient;
 use Kode\ExpressApi\Kuaidiniao\Config as KuaidiniaoConfig;
 use Kode\ExpressApi\Juhe\Client as JuheClient;
 use Kode\ExpressApi\Juhe\Config as JuheConfig;
+use Kode\ExpressApi\SeventeenTrack\Client as SeventeenTrackClient;
+use Kode\ExpressApi\SeventeenTrack\Config as SeventeenTrackConfig;
 use Kode\ExpressApi\Common\CourierRecognizer;
+use Kode\ExpressApi\Common\AbstractAggregatorClient;
+use Kode\ExpressApi\Common\Resolver\AggregateResolver;
 use Kode\ExpressApi\LogisticsChain\LogisticsChain;
 
 /**
@@ -56,7 +60,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '2.3.0';
+    public const VERSION = '2.4.0';
 
     /**
      * 支持的快递公司列表
@@ -158,6 +162,11 @@ class ExpressApiClient
             'name' => '聚合数据（聚合查询）',
             'client' => JuheClient::class,
             'config' => JuheConfig::class
+        ],
+        'seventeentrack' => [
+            'name' => '17TRACK（国际运单识别）',
+            'client' => SeventeenTrackClient::class,
+            'config' => SeventeenTrackConfig::class
         ]
     ];
 
@@ -359,14 +368,62 @@ class ExpressApiClient
      *
      * 解决「不用自己去指定物流链的物流」：仅凭运单号即可推断其归属的
      * 快递 / 货运 / 国际物流服务商。规则未命中且已配置聚合解析器时，
-     * 会自动回退到快递100 / 快递鸟 / 聚合数据等权威解析。
+     * 会自动回退到 17TRACK / 快递100 / 快递鸟 / 聚合数据等权威解析。
      *
-     * @param string $trackingNo 运单号
+     * 推荐用法：先用 buildAggregateResolver() 聚合已签约的聚合查询服务商，
+     * 再将返回的解析器传入本方法，即可获得「确定性」识别：
+     * ```php
+     * $resolver = ExpressApiClient::buildAggregateResolver([
+     *     'seventeentrack' => ['app_secret' => 'TOKEN'],
+     *     'kuaidi100'      => ['app_key' => 'K', 'app_secret' => 'S'],
+     * ]);
+     * $courier = ExpressApiClient::recognize($trackingNo, $resolver);
+     * ```
+     *
+     * @param string        $trackingNo 运单号
+     * @param callable|null $resolver   可选：本次调用使用的解析器（覆盖全局设置）
      * @return string|null 命中返回承运商代码（如 'sf'），未命中返回 null
      */
-    public static function recognize(string $trackingNo): ?string
+    public static function recognize(string $trackingNo, ?callable $resolver = null): ?string
     {
-        return CourierRecognizer::detect($trackingNo);
+        return CourierRecognizer::detect($trackingNo, $resolver);
+    }
+
+    /**
+     * 构建聚合解析器（将多家已签约的聚合查询服务商聚合为权威识别源）
+     *
+     * 仅接纳本 SDK 已支持且属于聚合查询客户端（AbstractAggregatorClient）的承运商，
+     * 配置无效或实例化失败时自动跳过，不会中断构建。
+     *
+     * @param array $aggregators 聚合商配置，键为承运商代码，值为配置数组
+     *                           例如 ['seventeentrack' => ['app_secret' => 'TOKEN']]
+     * @return AggregateResolver
+     */
+    public static function buildAggregateResolver(array $aggregators): AggregateResolver
+    {
+        $resolver = new AggregateResolver();
+
+        foreach ($aggregators as $code => $config) {
+            $code = strtolower((string) $code);
+            if (!self::isCourierSupported($code)) {
+                continue;
+            }
+
+            $info = self::$supportedCouriers[$code];
+            if (!is_subclass_of($info['client'], AbstractAggregatorClient::class)) {
+                continue;
+            }
+
+            try {
+                $client = self::create($code, (array) $config);
+                $resolver->add($client);
+            } catch (\Throwable $e) {
+                // 配置无效则跳过该聚合商
+                continue;
+            }
+        }
+
+        return $resolver;
     }
 
     /**

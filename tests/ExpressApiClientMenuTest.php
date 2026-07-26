@@ -22,7 +22,7 @@ class ExpressApiClientMenuTest extends TestCase
             'ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao',
             'fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen',
             'debang', 'ane', 'hoau',
-            'jd', 'kuaidi100', 'kuaidiniao', 'juhe',
+            'jd', 'kuaidi100', 'kuaidiniao', 'juhe', 'seventeentrack',
         ];
         $this->assertSame($expected, array_keys($menu['couriers']));
 
@@ -157,7 +157,7 @@ class ExpressApiClientMenuTest extends TestCase
 
     public function testAggregatorsExposeTrackingAndUnsupportedStubs(): void
     {
-        foreach (['kuaidi100', 'kuaidiniao', 'juhe'] as $code) {
+        foreach (['kuaidi100', 'kuaidiniao', 'juhe', 'seventeentrack'] as $code) {
             $menu = ExpressApiClient::getApiMenu($code);
             $ops = $menu['couriers'][$code]['operations'];
 
@@ -166,7 +166,7 @@ class ExpressApiClientMenuTest extends TestCase
         }
 
         // 聚合商不承接实操：调用 sendShipment 会抛出「不支持」异常
-        foreach (['kuaidi100', 'kuaidiniao', 'juhe'] as $code) {
+        foreach (['kuaidi100', 'kuaidiniao', 'juhe', 'seventeentrack'] as $code) {
             $client = ExpressApiClient::create($code, ['app_key' => 'k', 'app_secret' => 's']);
             try {
                 $client->sendShipment([]);
@@ -204,5 +204,31 @@ class ExpressApiClientMenuTest extends TestCase
         $this->assertInstanceOf(\Kode\ExpressApi\LogisticsChain\LogisticsChain::class, $chain);
         $legs = $chain->toArray()['legs'];
         $this->assertCount(5, $legs); // 揽收 → 干线 → 跨境 → 清关 → 末端
+    }
+
+    public function testRecognizeWithAggregateResolver(): void
+    {
+        // 规则未命中时，可注入聚合解析器作为权威回退（此处用闭包模拟 17TRACK 回退）
+        $resolver = function (string $trackingNo): ?string {
+            if ($trackingNo === 'UNKNOWN-INTL-999') {
+                return 'dhl';
+            }
+            return null;
+        };
+        $this->assertSame('dhl', ExpressApiClient::recognize('UNKNOWN-INTL-999', $resolver));
+        // 未识别且解析器返回 null → null
+        $this->assertNull(ExpressApiClient::recognize('totally-unknown', $resolver));
+    }
+
+    public function testBuildAggregateResolverSkipsUnsupportedAndNonAggregators(): void
+    {
+        // 传入聚合商配置；非聚合商（如 ems）会被忽略，配置无效会被跳过
+        $resolver = ExpressApiClient::buildAggregateResolver([
+            'seventeentrack' => ['app_secret' => 'TOKEN'],
+            'kuaidi100'      => ['app_key' => 'K', 'app_secret' => 'S'],
+            'ems'            => [], // 非聚合商，应被忽略
+            'nope'           => [], // 不支持，应被忽略
+        ]);
+        $this->assertSame(2, $resolver->count());
     }
 }
