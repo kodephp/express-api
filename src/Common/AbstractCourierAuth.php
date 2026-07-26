@@ -59,6 +59,16 @@ abstract class AbstractCourierAuth implements AuthInterface
     }
 
     /**
+     * 获取快递公司名称（用于错误信息展示）
+     *
+     * @return string
+     */
+    public function getProviderName(): string
+    {
+        return $this->providerName;
+    }
+
+    /**
      * 获取访问令牌（自动处理获取 / 刷新）
      *
      * @return string

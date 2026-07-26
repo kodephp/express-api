@@ -33,6 +33,16 @@ use Kode\ExpressApi\Ane\Client as AneClient;
 use Kode\ExpressApi\Ane\Config as AneConfig;
 use Kode\ExpressApi\Hoau\Client as HoauClient;
 use Kode\ExpressApi\Hoau\Config as HoauConfig;
+use Kode\ExpressApi\Jd\Client as JdClient;
+use Kode\ExpressApi\Jd\Config as JdConfig;
+use Kode\ExpressApi\Kuaidi100\Client as Kuaidi100Client;
+use Kode\ExpressApi\Kuaidi100\Config as Kuaidi100Config;
+use Kode\ExpressApi\Kuaidiniao\Client as KuaidiniaoClient;
+use Kode\ExpressApi\Kuaidiniao\Config as KuaidiniaoConfig;
+use Kode\ExpressApi\Juhe\Client as JuheClient;
+use Kode\ExpressApi\Juhe\Config as JuheConfig;
+use Kode\ExpressApi\Common\CourierRecognizer;
+use Kode\ExpressApi\LogisticsChain\LogisticsChain;
 
 /**
  * 通用快递API客户端
@@ -46,7 +56,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '2.2.0';
+    public const VERSION = '2.3.0';
 
     /**
      * 支持的快递公司列表
@@ -128,6 +138,26 @@ class ExpressApiClient
             'name' => '天地华宇',
             'client' => HoauClient::class,
             'config' => HoauConfig::class
+        ],
+        'jd' => [
+            'name' => '京东快递/京东物流',
+            'client' => JdClient::class,
+            'config' => JdConfig::class
+        ],
+        'kuaidi100' => [
+            'name' => '快递100（聚合查询）',
+            'client' => Kuaidi100Client::class,
+            'config' => Kuaidi100Config::class
+        ],
+        'kuaidiniao' => [
+            'name' => '快递鸟（聚合查询）',
+            'client' => KuaidiniaoClient::class,
+            'config' => KuaidiniaoConfig::class
+        ],
+        'juhe' => [
+            'name' => '聚合数据（聚合查询）',
+            'client' => JuheClient::class,
+            'config' => JuheConfig::class
         ]
     ];
 
@@ -322,6 +352,50 @@ class ExpressApiClient
     public static function version(): string
     {
         return self::VERSION;
+    }
+
+    /**
+     * 运单号自动识别归属承运商（委托 CourierRecognizer）
+     *
+     * 解决「不用自己去指定物流链的物流」：仅凭运单号即可推断其归属的
+     * 快递 / 货运 / 国际物流服务商。规则未命中且已配置聚合解析器时，
+     * 会自动回退到快递100 / 快递鸟 / 聚合数据等权威解析。
+     *
+     * @param string $trackingNo 运单号
+     * @return string|null 命中返回承运商代码（如 'sf'），未命中返回 null
+     */
+    public static function recognize(string $trackingNo): ?string
+    {
+        return CourierRecognizer::detect($trackingNo);
+    }
+
+    /**
+     * 按发货意图自动编排物流链（委托 LogisticsChain）
+     *
+     * 给定起止国家 / 重量 / 运输方式，自动挑选每个环节
+     * （揽收 → 干线 → 跨境 → 清关 → 末端）的承运商并拼装整条链路，
+     * 无需逐段指定。可用 $prefer 覆盖某个环节的推荐承运商。
+     *
+     * @param array $request 发货意图（origin/dest/weight/mode）
+     * @param array $configs 已签约承运商配置（键为承运商代码）
+     * @param array $prefer  环节级承运商覆盖（如 ['crossborder' => 'fourpx']）
+     * @return LogisticsChain
+     */
+    public static function buildChain(array $request, array $configs, array $prefer = []): LogisticsChain
+    {
+        return LogisticsChain::compose($request, $configs, $prefer);
+    }
+
+    /**
+     * 按运单号自动识别并推断完整物流链（委托 LogisticsChain）
+     *
+     * @param string $trackingNo 运单号
+     * @param array  $configs    已签约承运商配置
+     * @return LogisticsChain
+     */
+    public static function chainFromTracking(string $trackingNo, array $configs): LogisticsChain
+    {
+        return LogisticsChain::fromTracking($trackingNo, $configs);
     }
 
     /**

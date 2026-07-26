@@ -5,17 +5,18 @@
 ## 功能特性
 
 - 支持多种快递公司API，覆盖「国内快递 + 国内货运（零担/整车/快运）+ 国际物流（跨境 / 货运）」完整物流链：
-  - 国内快递：EMS、顺丰SF、韵达、中通、申通、菜鸟网络
+  - 国内快递：EMS、顺丰SF、韵达、中通、申通、菜鸟网络、京东快递/京东物流
   - 国内货运：德邦物流、安能物流、天地华宇（零担 / 整车 / 快运，支持网点查询、运费报价）
   - 国际物流：4PX递四方、顺丰国际、DHL国际、云途物流、EMS国际、燕文物流
     （支持海运 / 空运下单、海关申报、清关查询、运费报价）
-- 当前版本：v2.2.0
+  - 聚合查询：快递100、快递鸟、聚合数据（运单轨迹 + 运单号自动识别，作为承运商自动识别的权威回退）
+- 当前版本：v2.3.0
+- **物流链自动关联（v2.3.0）**：仅凭运单号即可 `recognize()` 自动识别承运商；给定发货意图（起止国 / 重量 / 运输方式）即可 `buildChain()` 自动拼装「揽收 → 干线 → 跨境 → 清关 → 末端」全链路，无需逐段指定承运商
 - 统一的接口调用方式，简化开发流程
 - 灵活的面单布局管理，支持可视化编辑
 - 完善的错误处理和响应标准化（按快递商注册响应策略）
 - 传输层韧性增强：指数退避重试（瞬时故障自动重试，4xx 不重试）、连接超时、最近请求诊断
 - 跨快递商聚合能力：`batchQueryTracking()` 批量轨迹（单条失败隔离）
-- 完善的错误处理和响应标准化
 - 支持PSR-12代码规范
 - 支持PHP 8.3+
 - 支持多语言字段配置
@@ -735,6 +736,67 @@ $network = $client->queryNetwork([
 ]);
 ```
 
+### 物流链自动关联（v2.3.0，核心能力）
+
+你**不用自己去指定物流链的物流**：给出运单号，SDK 自动识别归属承运商；
+给出发货意图（起止国家 / 重量 / 运输方式），SDK 自动挑选每个环节的承运商并拼装整条链路。
+
+**1) 运单号自动识别承运商** —— `ExpressApiClient::recognize()`
+
+```php
+use Kode\ExpressApi\ExpressApiClient;
+
+// 仅凭运单号推断承运商（无需手动指定）
+$courier = ExpressApiClient::recognize('SF1234567890123'); // => 'sf'
+$courier = ExpressApiClient::recognize('JD0091234567890'); // => 'jd'
+```
+
+底层由 `CourierRecognizer` 完成，内置各服务商运单号特征规则（前缀 / 长度 / 字符集）；
+规则未命中且已配置聚合解析器时，自动回退到快递100 / 快递鸟 / 聚合数据等权威解析：
+
+```php
+use Kode\ExpressApi\Common\CourierRecognizer;
+
+// 注册 / 覆盖规则
+CourierRecognizer::registerPattern('my_courier', '/^MY\d{6}$/i');
+// 设置聚合解析器（权威回退）
+CourierRecognizer::setResolver(function (string $no) {
+    // 调用快递100 等聚合计费的识别接口，返回承运商代码或 null
+    return $someAggregator->recognize($no);
+});
+```
+
+**2) 按发货意图自动拼装物流链** —— `ExpressApiClient::buildChain()`
+
+```php
+$chain = ExpressApiClient::buildChain(
+    ['origin' => 'CN', 'dest' => 'US', 'weight' => 5, 'mode' => 'air'],
+    [
+        'sf' => $sfConfig, 'debang' => $debangConfig,
+        'dhl' => $dhlConfig, 'ems_international' => $emsIntlConfig, 'jd' => $jdConfig,
+    ]
+    // 可选：环节级覆盖，如 ['crossborder' => 'fourpx']
+);
+
+$legs = $chain->toArray()['legs'];
+// => [揽收(sf), 干线(debang), 跨境(dhl), 清关(ems_international), 末端(jd)]
+```
+
+不传 `prefer` 时，编排器按「已签约配置」自动挑选每个环节的最优承运商；
+某环节未签约则自动回退同类目其他承运商，仍缺失则标记 `unavailable` 而不中断整链。
+
+**3) 按运单号自动识别并推断完整链路** —— `ExpressApiClient::chainFromTracking()`
+
+```php
+$chain = ExpressApiClient::chainFromTracking('SF1234567890123', ['sf' => $sfConfig]);
+$info = $chain->toArray();
+// $info['detected_courier'] => 'sf'            // 自动识别的承运商
+// $info['suggested_chain']  => [...]          // 推断的完整 5 环节链路模板
+```
+
+> 三类入口均不触网：`recognize()` 与 `buildChain()/chainFromTracking()` 仅做本地识别与编排，
+> 真正查询需调用 `$chain->track($trackingNo)`（单段失败相互隔离）。
+
 ### 自动发现能力菜单（物流链总览）
 
 `getApiMenu()` 会基于各客户端实际方法，按 `order / query / label / freight / customs` 分类自动生成能力目录，
@@ -763,7 +825,7 @@ HttpClient::setRetry(2, 200);
 HttpClient::setRetry(0);
 ```
 
-> 重试为全局静态配置，作用于全部 15 家快递商。SSL 强制校验默认开启，可用 `HttpClient::setVerifySsl(false)` 关闭（仅测试/内网自签场景）。
+> 重试为全局静态配置，作用于全部 19 家快递商。SSL 强制校验默认开启，可用 `HttpClient::setVerifySsl(false)` 关闭（仅测试/内网自签场景）。
 
 ### 响应归一化策略
 
@@ -805,7 +867,7 @@ $result = ExpressApiClient::batchQueryTracking([
 ### 版本号入口
 
 ```php
-echo ExpressApiClient::version(); // 例如 "2.2.0"
+echo ExpressApiClient::version(); // 例如 "2.3.0"
 ```
 
 ### 请求诊断
@@ -1218,6 +1280,7 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 | `zto` | 中通快递 | 签名鉴权 |
 | `sto` | 申通快递 | 签名鉴权 |
 | `cainiao` | 菜鸟网络 | 需 PartnerId |
+| `jd` | 京东快递/京东物流 | 签名鉴权 |
 
 ### 国际物流（跨境 / 货运）
 
@@ -1258,7 +1321,19 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 
 > 注：各服务商真实接口路径与字段以签约后的开放平台文档为准，SDK 已提供标准鉴权与传输骨架，接入时按文档核对即可。
 
-- 计划支持：京东快递、快递100、快递鸟、聚合快递
+### 聚合查询（运单轨迹 + 运单号自动识别）
+
+| 代码 | 名称 | 鉴权方式 | 说明 |
+| --- | --- | --- | --- |
+| `kuaidi100` | 快递100 | MD5 签名 | 运单轨迹 + 智能识别承运商 |
+| `kuaidiniao` | 快递鸟 | MD5(Base64) 签名 | 运单轨迹 + 即时识别 |
+| `juhe` | 聚合数据 | API Key | 运单轨迹 + 自动判定 |
+
+聚合查询服务商**只提供轨迹查询与运单号自动识别**，并不承接下单 / 打单 / 拦截等实操业务；
+调用其实操方法会抛出明确的「不支持」异常。它们更重要的角色是 **`CourierRecognizer` 的权威回退解析器**：
+当运单号规则无法命中时，可将其接入为动态解析器，确定性地识别归属承运商。
+
+- 已支持：京东快递/京东物流、快递100、快递鸟、聚合数据（见上表）
 
 ## 各快递公司特定配置参数
 

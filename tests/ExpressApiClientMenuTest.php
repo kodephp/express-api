@@ -22,6 +22,7 @@ class ExpressApiClientMenuTest extends TestCase
             'ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao',
             'fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen',
             'debang', 'ane', 'hoau',
+            'jd', 'kuaidi100', 'kuaidiniao', 'juhe',
         ];
         $this->assertSame($expected, array_keys($menu['couriers']));
 
@@ -152,5 +153,56 @@ class ExpressApiClientMenuTest extends TestCase
             $this->assertArrayHasKey('createFtl', $ops['freight']);
             $this->assertArrayHasKey('queryNetwork', $ops['freight']);
         }
+    }
+
+    public function testAggregatorsExposeTrackingAndUnsupportedStubs(): void
+    {
+        foreach (['kuaidi100', 'kuaidiniao', 'juhe'] as $code) {
+            $menu = ExpressApiClient::getApiMenu($code);
+            $ops = $menu['couriers'][$code]['operations'];
+
+            // 聚合查询核心能力：轨迹查询
+            $this->assertArrayHasKey('queryTracking', $ops['query'] ?? []);
+        }
+
+        // 聚合商不承接实操：调用 sendShipment 会抛出「不支持」异常
+        foreach (['kuaidi100', 'kuaidiniao', 'juhe'] as $code) {
+            $client = ExpressApiClient::create($code, ['app_key' => 'k', 'app_secret' => 's']);
+            try {
+                $client->sendShipment([]);
+                $this->fail("{$code} 应拒绝 sendShipment");
+            } catch (\Kode\ExpressApi\Common\Exception\ExpressApiException $e) {
+                $this->assertStringContainsString('不支持', $e->getMessage());
+            }
+        }
+    }
+
+    public function testJdExposesFullExpressOperations(): void
+    {
+        $menu = ExpressApiClient::getApiMenu('jd');
+        $ops = $menu['couriers']['jd']['operations'];
+
+        $this->assertArrayHasKey('sendShipment', $ops['order']);
+        $this->assertArrayHasKey('queryOrder', $ops['query']);
+        $this->assertArrayHasKey('queryTracking', $ops['query']);
+        $this->assertArrayHasKey('cancelOrder', $ops['order']);
+        $this->assertArrayHasKey('printLabel', $ops['label']);
+    }
+
+    public function testRecognizeAndBuildChainEntryPointsExist(): void
+    {
+        // 自动识别入口：仅凭运单号推断承运商
+        $this->assertSame('sf', ExpressApiClient::recognize('SF1234567890123'));
+        $this->assertSame('jd', ExpressApiClient::recognize('JD0091234567890'));
+        $this->assertNull(ExpressApiClient::recognize('some-random-no'));
+
+        // 自动编排入口：给定发货意图，自动组装物流链（无需逐段指定承运商）
+        $chain = ExpressApiClient::buildChain(
+            ['origin' => 'CN', 'dest' => 'US', 'weight' => 5, 'mode' => 'air'],
+            ['sf' => [], 'debang' => [], 'dhl' => [], 'ems_international' => [], 'jd' => []]
+        );
+        $this->assertInstanceOf(\Kode\ExpressApi\LogisticsChain\LogisticsChain::class, $chain);
+        $legs = $chain->toArray()['legs'];
+        $this->assertCount(5, $legs); // 揽收 → 干线 → 跨境 → 清关 → 末端
     }
 }
