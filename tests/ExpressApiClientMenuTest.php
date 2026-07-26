@@ -25,6 +25,7 @@ class ExpressApiClientMenuTest extends TestCase
             'debang', 'ane', 'hoau',
             'jd', 'jt', 'yto',
             'kuaidi100', 'kuaidiniao', 'juhe', 'seventeentrack',
+            'usps', 'postnl', 'royalmail', 'bpost', 'singpost', 'best',
         ];
         $this->assertSame($expected, array_keys($menu['couriers']));
 
@@ -193,7 +194,7 @@ class ExpressApiClientMenuTest extends TestCase
 
     public function testNewInternationalCouriersExposeInternationalOperations(): void
     {
-        foreach (['fedex', 'ups'] as $code) {
+        foreach (['fedex', 'ups', 'usps', 'postnl', 'royalmail', 'bpost', 'singpost'] as $code) {
             $menu = ExpressApiClient::getApiMenu($code);
             $ops = $menu['couriers'][$code]['operations'];
 
@@ -207,7 +208,7 @@ class ExpressApiClientMenuTest extends TestCase
 
     public function testNewDomesticCouriersExposeExpressOperations(): void
     {
-        foreach (['jt', 'yto'] as $code) {
+        foreach (['jt', 'yto', 'best'] as $code) {
             $menu = ExpressApiClient::getApiMenu($code);
             $ops = $menu['couriers'][$code]['operations'];
 

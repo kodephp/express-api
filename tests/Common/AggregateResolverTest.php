@@ -37,9 +37,9 @@ class AggregateResolverTest extends TestCase
 
     public function testUnknownExternalCodeResolvesToNull(): void
     {
-        // "usps" 尚未接入，别名映射为 null → 整体返回 null
+        // 真实未知的外部代码（SDK 未收录）→ 整体返回 null
         $resolver = new AggregateResolver();
-        $resolver->add($this->stub('usps'));
+        $resolver->add($this->stub('unknowncarrierxyz'));
 
         $this->assertNull($resolver->resolve('ANY-NUMBER'));
     }
@@ -57,8 +57,12 @@ class AggregateResolverTest extends TestCase
 
     public function testNewlySupportedExternalCodesResolveToInternal(): void
     {
-        // fedex/ups/yuantong 现已接入，别名映射为对应内部代码
-        foreach (['fedex' => 'fedex', 'ups' => 'ups', 'yuantong' => 'yto'] as $ext => $internal) {
+        // 所有历史预留的「已知但未接入」渠道已在 v2.6.0 接入，别名映射为对应内部代码
+        foreach ([
+            'fedex' => 'fedex', 'ups' => 'ups', 'yuantong' => 'yto',
+            'usps' => 'usps', 'postnl' => 'postnl', 'royalmail' => 'royalmail',
+            'bpost' => 'bpost', 'singpost' => 'singpost', 'htky' => 'best',
+        ] as $ext => $internal) {
             $resolver = new AggregateResolver();
             $resolver->add($this->stub($ext));
             $this->assertSame($internal, $resolver->resolve('ANY-NUMBER'));

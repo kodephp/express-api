@@ -51,6 +51,18 @@ use Kode\ExpressApi\Jt\Client as JtClient;
 use Kode\ExpressApi\Jt\Config as JtConfig;
 use Kode\ExpressApi\Yto\Client as YtoClient;
 use Kode\ExpressApi\Yto\Config as YtoConfig;
+use Kode\ExpressApi\Usps\Client as UspsClient;
+use Kode\ExpressApi\Usps\Config as UspsConfig;
+use Kode\ExpressApi\Postnl\Client as PostnlClient;
+use Kode\ExpressApi\Postnl\Config as PostnlConfig;
+use Kode\ExpressApi\Royalmail\Client as RoyalmailClient;
+use Kode\ExpressApi\Royalmail\Config as RoyalmailConfig;
+use Kode\ExpressApi\Bpost\Client as BpostClient;
+use Kode\ExpressApi\Bpost\Config as BpostConfig;
+use Kode\ExpressApi\Singpost\Client as SingpostClient;
+use Kode\ExpressApi\Singpost\Config as SingpostConfig;
+use Kode\ExpressApi\Best\Client as BestClient;
+use Kode\ExpressApi\Best\Config as BestConfig;
 use Kode\ExpressApi\Common\CourierRecognizer;
 use Kode\ExpressApi\Common\AbstractAggregatorClient;
 use Kode\ExpressApi\Common\Resolver\AggregateResolver;
@@ -68,7 +80,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '2.5.0';
+    public const VERSION = '2.6.0';
 
     /**
      * 支持的快递公司列表
@@ -195,6 +207,36 @@ class ExpressApiClient
             'name' => '17TRACK（国际运单识别）',
             'client' => SeventeenTrackClient::class,
             'config' => SeventeenTrackConfig::class
+        ],
+        'usps' => [
+            'name' => 'USPS（美国邮政）国际',
+            'client' => UspsClient::class,
+            'config' => UspsConfig::class
+        ],
+        'postnl' => [
+            'name' => 'PostNL（荷兰邮政）国际',
+            'client' => PostnlClient::class,
+            'config' => PostnlConfig::class
+        ],
+        'royalmail' => [
+            'name' => 'Royal Mail（英国皇家邮政）国际',
+            'client' => RoyalmailClient::class,
+            'config' => RoyalmailConfig::class
+        ],
+        'bpost' => [
+            'name' => 'bpost（比利时邮政）国际',
+            'client' => BpostClient::class,
+            'config' => BpostConfig::class
+        ],
+        'singpost' => [
+            'name' => 'SingPost（新加坡邮政）国际',
+            'client' => SingpostClient::class,
+            'config' => SingpostConfig::class
+        ],
+        'best' => [
+            'name' => '百世快递（百世汇通）',
+            'client' => BestClient::class,
+            'config' => BestConfig::class
         ]
     ];
 

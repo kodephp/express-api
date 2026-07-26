@@ -37,8 +37,9 @@ class AggregateResolver
     /**
      * 外部聚合服务商返回的承运商代码 → 本 SDK 内部承运商代码。
      *
-     * 仅收录本 SDK 已支持的承运商；尚未接入（如 USPS、PostNL、RoyalMail）映射为 null，
-     * 识别到时视为「已知但本 SDK 暂不支持」，解析器返回 null，等待后续补充渠道。
+     * 仅收录本 SDK 已支持的承运商；历史上预留的「已知但未接入」渠道
+     * （usps / postnl / royalmail / bpost / singpost / htky）已在 v2.6.0 全部接入，
+     * 别名表至此完整闭环，不再存在 null 占位。
      *
      * @var array<string,string|null>
      */
@@ -82,13 +83,13 @@ class AggregateResolver
         'fedex'           => 'fedex',
         'ups'             => 'ups',
         'yuantong'        => 'yto',
-        // —— 尚未接入（待补充渠道）——
-        'usps'            => null,
-        'postnl'          => null,
-        'royalmail'       => null,
-        'bpost'           => null,
-        'singpost'        => null,
-        'htky'            => null,
+        'htky'            => 'best',
+        // —— 国际邮政（v2.6.0 接入）——
+        'usps'            => 'usps',
+        'postnl'          => 'postnl',
+        'royalmail'       => 'royalmail',
+        'bpost'           => 'bpost',
+        'singpost'        => 'singpost',
     ];
 
     /**

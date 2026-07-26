@@ -833,7 +833,7 @@ HttpClient::setRetry(2, 200);
 HttpClient::setRetry(0);
 ```
 
-> 重试为全局静态配置，作用于全部 20 家快递商。SSL 强制校验默认开启，可用 `HttpClient::setVerifySsl(false)` 关闭（仅测试/内网自签场景）。
+> 重试为全局静态配置，作用于全部 30 家快递商。SSL 强制校验默认开启，可用 `HttpClient::setVerifySsl(false)` 关闭（仅测试/内网自签场景）。
 
 ### 响应归一化策略
 
@@ -1291,6 +1291,7 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 | `jd` | 京东快递/京东物流 | 签名鉴权 |
 | `jt` | 极兔速递（J&T） | 签名鉴权 |
 | `yto` | 圆通速递（YTO） | 签名鉴权 |
+| `best` | 百世快递（百世汇通） | 签名鉴权 |
 
 ### 国际物流（跨境 / 货运）
 
@@ -1304,6 +1305,11 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 | `yanwen` | 燕文物流 | MD5 签名 | 海运 / 空运 |
 | `fedex` | FedEx（联邦快递）国际 | OAuth2 Bearer | 空运为主 |
 | `ups` | UPS（联合包裹）国际 | OAuth2 Bearer | 空运为主 |
+| `usps` | USPS（美国邮政）国际 | OAuth2 Bearer | 空运 / 海运 |
+| `postnl` | PostNL（荷兰邮政）国际 | API Key | 空运 / 海运 |
+| `royalmail` | Royal Mail（英国皇家邮政）国际 | OAuth2 Bearer | 空运 / 海运 |
+| `bpost` | bpost（比利时邮政）国际 | API Key | 空运 / 海运 |
+| `singpost` | SingPost（新加坡邮政）国际 | API Key | 空运 / 海运 |
 
 国际物流客户端统一继承 `International\AbstractInternationalClient`，提供：
 

@@ -50,18 +50,18 @@ class LogisticsChain
 
     /** 空运 / 海运 跨境环节的候选优先级（取 $configs 中首个已配置者） */
     private static array $crossBorderByMode = [
-        'air' => ['dhl', 'sf_international', 'fourpx', 'yunexpress', 'ems_international', 'yanwen', 'fedex', 'ups'],
-        'sea' => ['fourpx', 'yunexpress', 'ems_international', 'dhl', 'sf_international', 'yanwen', 'fedex', 'ups'],
+        'air' => ['dhl', 'sf_international', 'fourpx', 'yunexpress', 'ems_international', 'yanwen', 'fedex', 'ups', 'usps', 'postnl', 'royalmail', 'bpost', 'singpost'],
+        'sea' => ['fourpx', 'yunexpress', 'ems_international', 'dhl', 'sf_international', 'yanwen', 'fedex', 'ups', 'usps', 'postnl', 'royalmail', 'bpost', 'singpost'],
     ];
 
     /** 各环节可按「类目」回退的承运商清单 */
     private static array $categoryFallback = [
-        self::LEG_PICKUP      => ['ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao', 'jd', 'jt', 'yto'],
+        self::LEG_PICKUP      => ['ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao', 'jd', 'jt', 'yto', 'best'],
         self::LEG_LINEHAUL    => ['debang', 'ane', 'hoau'],
-        self::LEG_CROSSBORDER => ['fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen', 'fedex', 'ups'],
-        self::LEG_CUSTOMS     => ['ems_international', 'fourpx', 'yanwen', 'dhl', 'sf_international', 'fedex', 'ups'],
-        self::LEG_LASTMILE    => ['ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao', 'jd', 'jt', 'yto',
-            'fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen', 'fedex', 'ups'],
+        self::LEG_CROSSBORDER => ['fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen', 'fedex', 'ups', 'usps', 'postnl', 'royalmail', 'bpost', 'singpost'],
+        self::LEG_CUSTOMS     => ['ems_international', 'fourpx', 'yanwen', 'dhl', 'sf_international', 'fedex', 'ups', 'usps', 'postnl', 'royalmail', 'bpost', 'singpost'],
+        self::LEG_LASTMILE    => ['ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao', 'jd', 'jt', 'yto', 'best',
+            'fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen', 'fedex', 'ups', 'usps', 'postnl', 'royalmail', 'bpost', 'singpost'],
     ];
 
     /** @var array 原始发货意图 */

@@ -79,6 +79,38 @@ class CourierRecognizerTest extends TestCase
         $this->assertSame('yto', CourierRecognizer::detect('YT1234567890123'));
     }
 
+    public function testDetectUspsByNumericLength(): void
+    {
+        // USPS 单号常见 16 位以上纯数字（以 9 开头，与 DHL 10–11 / FedEx 12–15 区分）
+        $this->assertSame('usps', CourierRecognizer::detect('9123456789012345'));
+    }
+
+    public function testDetectPostnlByPrefix(): void
+    {
+        $this->assertSame('postnl', CourierRecognizer::detect('3S123456789012'));
+    }
+
+    public function testDetectRoyalMailByPattern(): void
+    {
+        $this->assertSame('royalmail', CourierRecognizer::detect('AB12345678901GB'));
+    }
+
+    public function testDetectBpostByPrefix(): void
+    {
+        $this->assertSame('bpost', CourierRecognizer::detect('3V1234567890'));
+    }
+
+    public function testDetectSingpostByPrefix(): void
+    {
+        $this->assertSame('singpost', CourierRecognizer::detect('RR1234567890'));
+    }
+
+    public function testDetectBestByPrefix(): void
+    {
+        $this->assertSame('best', CourierRecognizer::detect('BS1234567890'));
+        $this->assertSame('best', CourierRecognizer::detect('BEST1234567890'));
+    }
+
     public function testDetectDebangByPrefix(): void
     {
         $this->assertSame('debang', CourierRecognizer::detect('DE1234567890'));
