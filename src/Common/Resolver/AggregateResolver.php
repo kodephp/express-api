@@ -37,7 +37,7 @@ class AggregateResolver
     /**
      * 外部聚合服务商返回的承运商代码 → 本 SDK 内部承运商代码。
      *
-     * 仅收录本 SDK 已支持的承运商；尚未接入（如圆通、FedEx、UPS）映射为 null，
+     * 仅收录本 SDK 已支持的承运商；尚未接入（如 USPS、PostNL、RoyalMail）映射为 null，
      * 识别到时视为「已知但本 SDK 暂不支持」，解析器返回 null，等待后续补充渠道。
      *
      * @var array<string,string|null>
@@ -79,15 +79,15 @@ class AggregateResolver
         'cnems'           => 'ems_international',
         'sfint'           => 'sf_international',
         'sfinternational' => 'sf_international',
+        'fedex'           => 'fedex',
+        'ups'             => 'ups',
+        'yuantong'        => 'yto',
         // —— 尚未接入（待补充渠道）——
-        'fedex'           => null,
-        'ups'             => null,
         'usps'            => null,
         'postnl'          => null,
         'royalmail'       => null,
         'bpost'           => null,
         'singpost'        => null,
-        'yuantong'        => null,
         'htky'            => null,
     ];
 

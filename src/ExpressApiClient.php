@@ -43,6 +43,14 @@ use Kode\ExpressApi\Juhe\Client as JuheClient;
 use Kode\ExpressApi\Juhe\Config as JuheConfig;
 use Kode\ExpressApi\SeventeenTrack\Client as SeventeenTrackClient;
 use Kode\ExpressApi\SeventeenTrack\Config as SeventeenTrackConfig;
+use Kode\ExpressApi\Fedex\Client as FedexClient;
+use Kode\ExpressApi\Fedex\Config as FedexConfig;
+use Kode\ExpressApi\Ups\Client as UpsClient;
+use Kode\ExpressApi\Ups\Config as UpsConfig;
+use Kode\ExpressApi\Jt\Client as JtClient;
+use Kode\ExpressApi\Jt\Config as JtConfig;
+use Kode\ExpressApi\Yto\Client as YtoClient;
+use Kode\ExpressApi\Yto\Config as YtoConfig;
 use Kode\ExpressApi\Common\CourierRecognizer;
 use Kode\ExpressApi\Common\AbstractAggregatorClient;
 use Kode\ExpressApi\Common\Resolver\AggregateResolver;
@@ -60,7 +68,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '2.4.0';
+    public const VERSION = '2.5.0';
 
     /**
      * 支持的快递公司列表
@@ -128,6 +136,16 @@ class ExpressApiClient
             'client' => YanwenClient::class,
             'config' => YanwenConfig::class
         ],
+        'fedex' => [
+            'name' => 'FedEx（联邦快递）国际',
+            'client' => FedexClient::class,
+            'config' => FedexConfig::class
+        ],
+        'ups' => [
+            'name' => 'UPS（联合包裹）国际',
+            'client' => UpsClient::class,
+            'config' => UpsConfig::class
+        ],
         'debang' => [
             'name' => '德邦物流',
             'client' => DebangClient::class,
@@ -147,6 +165,16 @@ class ExpressApiClient
             'name' => '京东快递/京东物流',
             'client' => JdClient::class,
             'config' => JdConfig::class
+        ],
+        'jt' => [
+            'name' => '极兔速递（J&T）',
+            'client' => JtClient::class,
+            'config' => JtConfig::class
+        ],
+        'yto' => [
+            'name' => '圆通速递（YTO）',
+            'client' => YtoClient::class,
+            'config' => YtoConfig::class
         ],
         'kuaidi100' => [
             'name' => '快递100（聚合查询）',

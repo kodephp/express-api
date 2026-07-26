@@ -37,22 +37,32 @@ class AggregateResolverTest extends TestCase
 
     public function testUnknownExternalCodeResolvesToNull(): void
     {
-        // "fedex" 尚未接入，别名映射为 null → 整体返回 null
+        // "usps" 尚未接入，别名映射为 null → 整体返回 null
         $resolver = new AggregateResolver();
-        $resolver->add($this->stub('fedex'));
+        $resolver->add($this->stub('usps'));
 
         $this->assertNull($resolver->resolve('ANY-NUMBER'));
     }
 
     public function testChainsSourcesFirstSupportedWins(): void
     {
-        // 第一家返回未接入的 "ups"，第二家返回已接入的 "zhongtong" → 取后者
+        // 第一家返回已接入的 "ups" → 直接采用，不再询问第二家
         $resolver = new AggregateResolver();
         $resolver->add($this->stub('ups'));
         $resolver->add($this->stub('zhongtong'));
 
-        $this->assertSame('zto', $resolver->resolve('ANY-NUMBER'));
+        $this->assertSame('ups', $resolver->resolve('ANY-NUMBER'));
         $this->assertSame(2, $resolver->count());
+    }
+
+    public function testNewlySupportedExternalCodesResolveToInternal(): void
+    {
+        // fedex/ups/yuantong 现已接入，别名映射为对应内部代码
+        foreach (['fedex' => 'fedex', 'ups' => 'ups', 'yuantong' => 'yto'] as $ext => $internal) {
+            $resolver = new AggregateResolver();
+            $resolver->add($this->stub($ext));
+            $this->assertSame($internal, $resolver->resolve('ANY-NUMBER'));
+        }
     }
 
     public function testSourceFailureDoesNotBreakChain(): void

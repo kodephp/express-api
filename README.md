@@ -1289,6 +1289,8 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 | `sto` | 申通快递 | 签名鉴权 |
 | `cainiao` | 菜鸟网络 | 需 PartnerId |
 | `jd` | 京东快递/京东物流 | 签名鉴权 |
+| `jt` | 极兔速递（J&T） | 签名鉴权 |
+| `yto` | 圆通速递（YTO） | 签名鉴权 |
 
 ### 国际物流（跨境 / 货运）
 
@@ -1300,6 +1302,8 @@ SDK 覆盖一条完整的物流链：**国内快递 → 国际运输（海运 / 
 | `yunexpress` | 云途物流 | HMAC-SHA256 签名 | 海运 / 空运 |
 | `ems_international` | EMS国际 | MD5 签名 | 海运 / 空运 |
 | `yanwen` | 燕文物流 | MD5 签名 | 海运 / 空运 |
+| `fedex` | FedEx（联邦快递）国际 | OAuth2 Bearer | 空运为主 |
+| `ups` | UPS（联合包裹）国际 | OAuth2 Bearer | 空运为主 |
 
 国际物流客户端统一继承 `International\AbstractInternationalClient`，提供：
 

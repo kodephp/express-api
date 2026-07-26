@@ -21,8 +21,10 @@ class ExpressApiClientMenuTest extends TestCase
         $expected = [
             'ems', 'sf', 'yunda', 'zto', 'sto', 'cainiao',
             'fourpx', 'sf_international', 'dhl', 'yunexpress', 'ems_international', 'yanwen',
+            'fedex', 'ups',
             'debang', 'ane', 'hoau',
-            'jd', 'kuaidi100', 'kuaidiniao', 'juhe', 'seventeentrack',
+            'jd', 'jt', 'yto',
+            'kuaidi100', 'kuaidiniao', 'juhe', 'seventeentrack',
         ];
         $this->assertSame($expected, array_keys($menu['couriers']));
 
@@ -187,6 +189,34 @@ class ExpressApiClientMenuTest extends TestCase
         $this->assertArrayHasKey('queryTracking', $ops['query']);
         $this->assertArrayHasKey('cancelOrder', $ops['order']);
         $this->assertArrayHasKey('printLabel', $ops['label']);
+    }
+
+    public function testNewInternationalCouriersExposeInternationalOperations(): void
+    {
+        foreach (['fedex', 'ups'] as $code) {
+            $menu = ExpressApiClient::getApiMenu($code);
+            $ops = $menu['couriers'][$code]['operations'];
+
+            // 国际物流核心能力
+            $this->assertArrayHasKey('queryTracking', $ops['query'] ?? []);
+            $this->assertArrayHasKey('sendShipment', $ops['order'] ?? []);
+            $this->assertArrayHasKey('freight', $ops);
+            $this->assertArrayHasKey('getQuotation', $ops['freight']);
+        }
+    }
+
+    public function testNewDomesticCouriersExposeExpressOperations(): void
+    {
+        foreach (['jt', 'yto'] as $code) {
+            $menu = ExpressApiClient::getApiMenu($code);
+            $ops = $menu['couriers'][$code]['operations'];
+
+            $this->assertArrayHasKey('sendShipment', $ops['order'] ?? []);
+            $this->assertArrayHasKey('queryOrder', $ops['query'] ?? []);
+            $this->assertArrayHasKey('queryTracking', $ops['query'] ?? []);
+            $this->assertArrayHasKey('cancelOrder', $ops['order'] ?? []);
+            $this->assertArrayHasKey('printLabel', $ops['label'] ?? []);
+        }
     }
 
     public function testRecognizeAndBuildChainEntryPointsExist(): void

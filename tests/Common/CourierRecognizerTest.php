@@ -56,6 +56,29 @@ class CourierRecognizerTest extends TestCase
         $this->assertSame('dhl', CourierRecognizer::detect('1234567890'));
     }
 
+    public function testDetectFedExByNumericLength(): void
+    {
+        // FedEx 单号常见 12–15 位数字（与 DHL 10–11 位区分）
+        $this->assertSame('fedex', CourierRecognizer::detect('1234567890123'));
+        $this->assertSame('fedex', CourierRecognizer::detect('123456789012345'));
+    }
+
+    public function testDetectUpsByPrefix(): void
+    {
+        // UPS 单号典型以 1Z 开头 + 16 位字母数字
+        $this->assertSame('ups', CourierRecognizer::detect('1Z1234567890123456'));
+    }
+
+    public function testDetectJtByPrefix(): void
+    {
+        $this->assertSame('jt', CourierRecognizer::detect('JT1234567890123'));
+    }
+
+    public function testDetectYtoByPrefix(): void
+    {
+        $this->assertSame('yto', CourierRecognizer::detect('YT1234567890123'));
+    }
+
     public function testDetectDebangByPrefix(): void
     {
         $this->assertSame('debang', CourierRecognizer::detect('DE1234567890'));
