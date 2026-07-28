@@ -64,6 +64,17 @@
     .lib-item:hover { border-color: var(--primary); color: var(--primary); background: #f0f5ff; }
     .lib-item:active { cursor: grabbing; }
     .lib-item .ico { display: block; font-size: 18px; margin-bottom: 4px; }
+    .lib-item { position: relative; }
+    .lib-item .cf-ops { position: absolute; top: 2px; right: 2px; display: none; gap: 2px; }
+    .lib-item:hover .cf-ops { display: flex; }
+    .lib-item .cf-ops i { font-style: normal; width: 17px; height: 17px; line-height: 16px; font-size: 11px;
+        border-radius: 4px; background: #fff; border: 1px solid var(--border); cursor: pointer; text-align: center; }
+    .lib-item .cf-ops i:hover { color: var(--primary); border-color: var(--primary); }
+    .lib-item .cf-ops i.del:hover { color: var(--danger); border-color: var(--danger); }
+    .lib-item .cf-ops i.del.armed { color: #fff; background: var(--danger); border-color: var(--danger); }
+    .lib-sub { display: flex; align-items: center; margin: 0 0 6px; }
+    .lib-sub span { font-size: 11px; color: var(--muted); }
+    #field-edit-form { margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #fafbfd; }
     .canvas-toolbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
     .canvas-toolbar .zoom-info { font-size: 12px; color: var(--muted); }
     .canvas-wrap { flex: 1; overflow: auto; padding: 30px; display: flex; justify-content: center; align-items: flex-start;
@@ -188,6 +199,7 @@
 
         <section class="block">
             <h3>字段库 <small style="color:var(--muted);font-weight:400">拖到画布即可</small></h3>
+            <div class="lib-sub"><span>基础元素</span></div>
             <div class="field-library" id="builtin-field-library">
                 <div class="lib-item" draggable="true" data-type="text"><span class="ico">T</span>文本</div>
                 <div class="lib-item" draggable="true" data-type="barcode"><span class="ico">▥</span>条形码</div>
@@ -196,9 +208,28 @@
                 <div class="lib-item" draggable="true" data-type="line"><span class="ico">—</span>分割线</div>
                 <div class="lib-item" draggable="true" data-type="rect"><span class="ico">▭</span>矩形框</div>
             </div>
-            <div id="custom-fields-block" hidden style="margin-top:14px">
-                <h3>自定义字段 <span class="badge">后台下发</span></h3>
-                <div class="field-library" id="custom-field-library"></div>
+            <div class="lib-sub" style="margin-top:14px">
+                <span>数据字段（常用 + 自定义）</span>
+                <div style="flex:1"></div>
+                <button id="btn-add-field" class="sm">＋ 新增</button>
+                <button id="btn-reset-fields" class="sm ghost" title="恢复内置常用字段（不影响你新增的字段）" style="margin-left:4px">↺ 恢复常用</button>
+            </div>
+            <div class="field-library" id="custom-field-library"></div>
+            <div id="field-edit-form" hidden>
+                <div class="form-group"><label>名称（标签）</label><input type="text" id="cf-label" placeholder="如：代收货款"></div>
+                <div class="form-group"><label>数据键 data_key（后端替换用）</label><input type="text" id="cf-key" list="std-keys" placeholder="如：cod_amount"></div>
+                <div class="row2">
+                    <div class="form-group"><label>类型</label>
+                        <select id="cf-type"><option value="text">文本</option><option value="barcode">条形码</option>
+                            <option value="qrcode">二维码</option><option value="image">图片</option></select>
+                    </div>
+                    <div class="form-group"><label>图标（可选）</label><input type="text" id="cf-icon" placeholder="◆" maxlength="2"></div>
+                </div>
+                <div class="form-group"><label>示例内容（可选）</label><input type="text" id="cf-placeholder" placeholder="拖入画布时显示的占位内容"></div>
+                <div style="display:flex;gap:6px">
+                    <button id="cf-save" class="primary sm" style="flex:1">保存字段</button>
+                    <button id="cf-cancel" class="sm">取消</button>
+                </div>
             </div>
             <p style="color:var(--muted);font-size:11px;margin-top:10px;line-height:1.5">
                 从上方拖拽字段到画布；在画布中拖动可移动，拖角/边可缩放；双击空白新增文本；选中后按 Delete 删除、方向键微调；Ctrl + 滚轮缩放画布。<br>
@@ -1009,9 +1040,37 @@
         inp.click();
     }
 
-    // ---------- 后台自定义字段库 ----------
+    // ---------- 数据字段库（常用 + 自定义，统一管理、可增删改、localStorage 持久化） ----------
     // 字段定义：{ id/key, label, type?, icon?, placeholder?, width?, height?, font_size?, bold?, align?, ... }
     var customFields = [];
+    var FIELD_STORE_KEY = "label_designer_fields_v1";
+    // 内置常用数据字段：首次打开自动填充；全部可编辑/删除；「↺ 恢复常用」可找回
+    var COMMON_FIELDS = [
+        { id: "waybill_no", label: "运单号", type: "barcode", icon: "▥", data_key: "waybill_no", placeholder: "1234567890123", width: 55, height: 22 },
+        { id: "receiver_block", label: "收件人", type: "text", icon: "收", data_key: "receiver_block", placeholder: "李四 139****0000\n上海市浦东新区xx路2号", width: 45, height: 18 },
+        { id: "sender_block", label: "发件人", type: "text", icon: "发", data_key: "sender_block", placeholder: "张三 138****0000\n北京市朝阳区xx路1号", width: 45, height: 18 },
+        { id: "order_no", label: "订单号", type: "text", icon: "№", data_key: "order_no", placeholder: "OD202601010001" },
+        { id: "sort_code", label: "三段码", type: "text", icon: "⛳", data_key: "sort_code", placeholder: "025-B21-06", bold: true, font_size: 16 },
+        { id: "big_word", label: "大头笔", type: "text", icon: "大", data_key: "big_word", placeholder: "沪A-01", bold: true, font_size: 20, width: 30, height: 15 },
+        { id: "cod_amount", label: "代收货款", type: "text", icon: "¥", data_key: "cod_amount", placeholder: "¥ 99.00", bold: true },
+        { id: "weight", label: "重量", type: "text", icon: "⚖", data_key: "weight", placeholder: "1.25 kg" },
+        { id: "goods_name", label: "商品名称", type: "text", icon: "📦", data_key: "goods_name", placeholder: "商品A ×2；商品B ×1", width: 60, height: 12 },
+        { id: "trace_qrcode", label: "追踪二维码", type: "qrcode", icon: "▦", data_key: "trace_qrcode", placeholder: "https://trace.example.com/123", width: 22, height: 22 },
+        { id: "print_time", label: "打印时间", type: "text", icon: "🕐", data_key: "print_time", placeholder: "2026-07-28 18:00" },
+        { id: "remark", label: "备注", type: "text", icon: "✎", data_key: "remark", placeholder: "易碎物品，轻拿轻放", width: 60, height: 12 }
+    ];
+    function persistFields() { try { localStorage.setItem(FIELD_STORE_KEY, JSON.stringify(customFields)); } catch (e) {} }
+    function loadFieldStore() {
+        try {
+            var raw = localStorage.getItem(FIELD_STORE_KEY);
+            if (raw) {
+                var d = JSON.parse(raw);
+                if (Array.isArray(d)) { customFields = d.map(normalizeCustomField).filter(Boolean); return; }
+            }
+        } catch (e) {}
+        customFields = COMMON_FIELDS.map(normalizeCustomField).filter(Boolean);
+        persistFields();
+    }
     function normalizeCustomField(cf) {
         if (!cf || typeof cf !== "object") return null;
         var id = cf.id || cf.key || cf.name; if (!id) return null;
@@ -1030,26 +1089,90 @@
         });
         return out;
     }
-    function setCustomFields(list) {
-        customFields = (Array.isArray(list) ? list : []).map(normalizeCustomField).filter(Boolean);
-        renderCustomLibrary();
-        return customFields.length;
+    function setCustomFields(list, replace) {
+        // 后台注入：默认按 id 合并到现有字段库（不整体覆盖用户自建字段），并持久化
+        var norm = (Array.isArray(list) ? list : []).map(normalizeCustomField).filter(Boolean);
+        if (replace === true) customFields = norm;
+        else norm.forEach(function (nf) {
+            var i = customFields.findIndex(function (c) { return c.id === nf.id; });
+            if (i >= 0) customFields[i] = nf; else customFields.push(nf);
+        });
+        persistFields(); renderCustomLibrary();
+        return norm.length;
     }
     function renderCustomLibrary() {
-        var block = $("custom-fields-block"), lib = $("custom-field-library");
+        var lib = $("custom-field-library");
         lib.innerHTML = "";
-        if (!customFields.length) { block.hidden = true; return; }
-        block.hidden = false;
+        if (!customFields.length) {
+            lib.innerHTML = '<div class="empty-hint" style="grid-column:1/-1">暂无数据字段，点「＋ 新增」或「↺ 恢复常用」</div>';
+            return;
+        }
         customFields.forEach(function (cf) {
             var d = document.createElement("div");
             d.className = "lib-item"; d.draggable = true; d.dataset.type = cf.type;
-            d.title = "字段ID：" + cf.id + (cf.placeholder ? "\n示例：" + cf.placeholder : "");
-            d.innerHTML = '<span class="ico">' + esc(cf.icon) + '</span>' + esc(cf.label);
+            d.title = "数据键：" + (cf.data_key || cf.id) + (cf.placeholder ? "\n示例：" + cf.placeholder : "") + "\n拖到画布使用；悬停可编辑/删除";
+            d.innerHTML = '<span class="ico">' + esc(cf.icon) + '</span>' + esc(cf.label) +
+                '<span class="cf-ops"><i class="edit" title="编辑">✎</i><i class="del" title="删除">×</i></span>';
             d.addEventListener("dragstart", function (e) {
                 e.dataTransfer.setData("text/plain", JSON.stringify({ type: cf.type, label: cf.label, custom: cf }));
             });
+            var del = d.querySelector("i.del");
+            del.onclick = function (e) {
+                e.stopPropagation();
+                if (!del.classList.contains("armed")) {
+                    del.classList.add("armed");
+                    setTimeout(function () { del.classList.remove("armed"); }, 3000);
+                    toast("再点一次 × 确认删除「" + cf.label + "」");
+                    return;
+                }
+                customFields = customFields.filter(function (c) { return c.id !== cf.id; });
+                persistFields(); renderCustomLibrary();
+                toast("已删除字段「" + cf.label + "」（↺ 可恢复常用字段）");
+            };
+            d.querySelector("i.edit").onclick = function (e) { e.stopPropagation(); openFieldForm(cf); };
             lib.appendChild(d);
         });
+    }
+    // ---- 字段的新增 / 编辑表单 ----
+    var editingFieldId = null;
+    function openFieldForm(cf) {
+        editingFieldId = cf ? cf.id : null;
+        $("cf-label").value = cf ? (cf.label || "") : "";
+        $("cf-key").value = cf ? (cf.data_key || cf.id) : "";
+        $("cf-type").value = cf && ["text", "barcode", "qrcode", "image"].indexOf(cf.type) >= 0 ? cf.type : "text";
+        $("cf-icon").value = cf && cf.icon && cf.icon !== "◆" ? cf.icon : "";
+        $("cf-placeholder").value = cf ? (cf.placeholder || "") : "";
+        $("field-edit-form").hidden = false;
+        $("cf-label").focus();
+    }
+    function closeFieldForm() { $("field-edit-form").hidden = true; editingFieldId = null; }
+    function saveFieldForm() {
+        var label = $("cf-label").value.trim();
+        var key = $("cf-key").value.trim();
+        if (!label) { toast("请填写字段名称"); return; }
+        if (!key) key = "field_" + Date.now().toString(36);
+        var nf = normalizeCustomField({
+            id: editingFieldId || key, label: label, data_key: key, type: $("cf-type").value,
+            icon: $("cf-icon").value.trim() || "◆", placeholder: $("cf-placeholder").value
+        });
+        if (editingFieldId) {
+            var i = customFields.findIndex(function (c) { return c.id === editingFieldId; });
+            if (i >= 0) customFields[i] = Object.assign({}, customFields[i], nf, { id: editingFieldId });
+        } else {
+            if (customFields.some(function (c) { return c.id === nf.id; })) nf.id += "_" + Date.now().toString(36);
+            customFields.push(nf);
+        }
+        persistFields(); renderCustomLibrary(); closeFieldForm();
+        toast(editingFieldId ? "字段已更新" : "已新增字段「" + label + "」");
+    }
+    function resetCommonFields() {
+        COMMON_FIELDS.forEach(function (c) {
+            var nf = normalizeCustomField(c);
+            var i = customFields.findIndex(function (x) { return x.id === nf.id; });
+            if (i >= 0) customFields[i] = nf; else customFields.push(nf);
+        });
+        persistFields(); renderCustomLibrary();
+        toast("已恢复 " + COMMON_FIELDS.length + " 个常用字段（你自建的字段保持不变）");
     }
     function loadCustomFieldSources() {
         // 1) 页面内全局配置：window.LABEL_DESIGNER_CONFIG = { customFields: [...] }
@@ -1201,7 +1324,13 @@
     syncTplForm();
     bindEvents();
     renderPresetGrid();
-    loadCustomFieldSources();
+    loadFieldStore();          // 从 localStorage 载入数据字段库（首次自动填充常用字段）
+    renderCustomLibrary();
+    $("btn-add-field").onclick = function () { openFieldForm(null); };
+    $("btn-reset-fields").onclick = resetCommonFields;
+    $("cf-save").onclick = saveFieldForm;
+    $("cf-cancel").onclick = closeFieldForm;
+    loadCustomFieldSources();  // 后台注入的字段按 id 合并进字段库
     renderTemplateList();
     syncPropPanel();
     autoFit(); // 初始即等比放大铺满中栏（内部会渲染画布）

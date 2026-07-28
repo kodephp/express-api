@@ -80,7 +80,7 @@ class ExpressApiClient
      *
      * @var string
      */
-    public const VERSION = '2.8.0';
+    public const VERSION = '2.9.0';
 
     /**
      * 支持的快递公司列表
