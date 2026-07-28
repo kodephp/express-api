@@ -1,0 +1,12 @@
+{
+  "_说明": "后台下发的自定义字段示例。data_key 为后端渲染时替换 {{data_key}} 的数据键，省略时默认取 id；label_position 可选 inline（标签同行）/ top（标签在上方），默认 inline。",
+  "fields": [
+    { "id": "waybill_no",   "label": "运单号",   "type": "barcode", "icon": "▥", "placeholder": "SF1234567890123", "width": 60, "height": 24, "data_key": "waybill_no" },
+    { "id": "cod_amount",   "label": "代收货款", "type": "text",    "icon": "¥", "placeholder": "¥ 199.00", "bold": true, "align": "right", "width": 40, "height": 8, "data_key": "cod_amount" },
+    { "id": "goods_name",   "label": "商品名称", "type": "text",    "icon": "📦", "placeholder": "无线鼠标 x2", "width": 60, "height": 10, "data_key": "goods_name" },
+    { "id": "weight",       "label": "重量",     "type": "text",    "icon": "⚖", "placeholder": "1.25 kg", "width": 30, "height": 8, "data_key": "weight" },
+    { "id": "insured",      "label": "保价金额", "type": "text",    "icon": "🛡", "placeholder": "¥ 500.00", "width": 30, "height": 8, "data_key": "insurance" },
+    { "id": "trace_qr",     "label": "物流追踪码", "type": "qrcode", "icon": "▦", "placeholder": "https://trace.example.com/SF123", "width": 25, "height": 25, "data_key": "tracking_url" },
+    { "id": "shop_slogan",  "label": "店铺口号", "type": "text",    "icon": "★", "placeholder": "感谢惠顾，好评返现", "font_size": 8, "align": "center", "width": 60, "height": 6, "label_position": "top" }
+  ]
+}

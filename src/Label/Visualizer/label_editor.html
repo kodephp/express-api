@@ -75,7 +75,13 @@
     .field:hover { outline: 1px solid rgba(47,111,237,.45); }
     .field.selected { outline: 2px solid var(--primary); outline-offset: 0; z-index: 5; }
     .field .field-label { font-size: 10px; color: #7a8694; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .field .field-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .field .field-content { white-space: pre-line; overflow: hidden; word-break: break-all; }
+    .field .field-content .inl-label { color: #555; font-weight: normal; }
+    .field .dk-badge { position: absolute; right: 1px; bottom: 1px; font-size: 9px; line-height: 1.35;
+        color: var(--primary); background: rgba(240,245,255,.92); border: 1px solid #d5e2fb; padding: 0 3px;
+        border-radius: 3px; pointer-events: none; max-width: 95%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .preset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+    .preset-grid button { padding: 6px 2px; font-size: 12px; }
     .field .barcode-vis { height: 60%; background: repeating-linear-gradient(90deg,#111 0 2px, #fff 2px 4px); margin-top: 3px; }
     .field .qrcode-vis { width: 60%; height: 60%; margin: 4px auto 0; display: grid; grid-template-columns: repeat(5,1fr); grid-template-rows: repeat(5,1fr); gap: 1px; background: #eee; }
     .field .qrcode-vis i { background: #333; } .field .qrcode-vis i.off { background: transparent; }
@@ -98,7 +104,7 @@
     .modal-head h3 { font-size: 15px; } .modal-head .actions { margin-left: auto; display: flex; gap: 8px; }
     .modal-body { padding: 20px; overflow: auto; background: #eef1f5; display: flex; flex-direction: column; align-items: center; gap: 14px; }
     .preview-paper { background: #fff; box-shadow: 0 6px 22px rgba(20,40,80,.18); transform-origin: top center; position: relative; }
-    .preview-paper .pfield { position: absolute; box-sizing: border-box; overflow: hidden; }
+    .preview-paper .pfield { position: absolute; box-sizing: border-box; overflow: hidden; white-space: pre-line; word-break: break-all; }
     .preview-tools { display: flex; gap: 8px; align-items: center; }
     .toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: #2c3e50; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 80; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
@@ -138,6 +144,10 @@
             </div>
             <ul id="template-list"></ul>
             <button id="btn-new-template" class="sm" style="width:100%;margin-top:10px;">+ 新增一个模板</button>
+            <div style="margin-top:12px">
+                <label style="font-size:12px;color:var(--muted)">按快递公司预置布局新建（每家布局不同）</label>
+                <div class="preset-grid" id="preset-grid"></div>
+            </div>
         </section>
 
         <section class="block">
@@ -147,12 +157,15 @@
                 <div class="form-group"><label>商家/公司</label><input type="text" id="tpl-merchant" placeholder="如：张三店铺"></div>
                 <div class="form-group"><label>快递公司</label>
                     <select id="tpl-courier">
-                        <option value="ems">邮政EMS</option><option value="sf">顺丰</option><option value="yt">圆通</option>
-                        <option value="zt">中通</option><option value="sto">申通</option><option value="jd">京东</option>
-                        <option value="db">德邦</option><option value="yto">韵达</option><option value="zto">中通</option><option value="other">其他</option>
+                        <option value="ems">邮政EMS</option><option value="sf">顺丰</option>
+                        <option value="zto">中通</option><option value="yto">韵达</option>
+                        <option value="sto">申通</option><option value="yt">圆通</option>
+                        <option value="jd">京东</option><option value="db">德邦</option>
+                        <option value="other">其他</option>
                     </select>
                 </div>
             </div>
+            <button id="btn-apply-preset" class="sm" style="width:100%;margin-bottom:11px" title="用所选快递公司的预置布局替换当前模板全部字段">↺ 套用所选快递的预置布局</button>
             <div class="form-group"><label>面单尺寸</label>
                 <select id="tpl-size">
                     <option value="100x150">100 × 150 mm（标准）</option>
@@ -167,15 +180,15 @@
                 <div class="form-group"><label>宽 mm</label><input type="number" id="custom-w" value="100" min="20"></div>
                 <div class="form-group"><label>高 mm</label><input type="number" id="custom-h" value="150" min="20"></div>
             </div>
-            <div class="form-group"><label>画布缩放 <span id="zoom-val">100%</span></label>
-                <input type="range" id="zoom" min="40" max="200" value="100" style="width:100%"></div>
+            <div class="form-group"><label>画布缩放 <span id="zoom-val">100%</span>（100% = 实际尺寸）</label>
+                <input type="range" id="zoom" min="40" max="300" value="100" style="width:100%"></div>
             <label class="inline-check"><input type="checkbox" id="show-grid" checked> 显示网格</label>
             <label class="inline-check"><input type="checkbox" id="snap" checked> 对齐网格（1mm）</label>
         </section>
 
         <section class="block">
             <h3>字段库 <small style="color:var(--muted);font-weight:400">拖到画布即可</small></h3>
-            <div class="field-library">
+            <div class="field-library" id="builtin-field-library">
                 <div class="lib-item" draggable="true" data-type="text"><span class="ico">T</span>文本</div>
                 <div class="lib-item" draggable="true" data-type="barcode"><span class="ico">▥</span>条形码</div>
                 <div class="lib-item" draggable="true" data-type="qrcode"><span class="ico">▦</span>二维码</div>
@@ -183,8 +196,13 @@
                 <div class="lib-item" draggable="true" data-type="line"><span class="ico">—</span>分割线</div>
                 <div class="lib-item" draggable="true" data-type="rect"><span class="ico">▭</span>矩形框</div>
             </div>
+            <div id="custom-fields-block" hidden style="margin-top:14px">
+                <h3>自定义字段 <span class="badge">后台下发</span></h3>
+                <div class="field-library" id="custom-field-library"></div>
+            </div>
             <p style="color:var(--muted);font-size:11px;margin-top:10px;line-height:1.5">
-                从上方拖拽字段到画布；在画布中拖动可移动，拖角/边可缩放；双击空白新增文本；选中后按 Delete 删除、方向键微调。
+                从上方拖拽字段到画布；在画布中拖动可移动，拖角/边可缩放；双击空白新增文本；选中后按 Delete 删除、方向键微调；Ctrl + 滚轮缩放画布。<br>
+                后台可通过 <code>window.LABEL_DESIGNER_CONFIG</code>、URL 参数 <code>?fields_url=</code>、<code>postMessage</code> 或 <code>LabelDesigner.setCustomFields()</code> 下发自定义字段。
             </p>
         </section>
     </aside>
@@ -208,6 +226,24 @@
             <div id="no-selection">点击画布中的字段进行编辑</div>
             <div id="prop-panel" hidden>
                 <div class="form-group"><label>字段 ID</label><input type="text" id="f-id"></div>
+                <div class="form-group"><label>数据键（后端替换用，输出 {{key}}）</label>
+                    <input type="text" id="f-datakey" list="std-keys" placeholder="如 receiver_name，留空不绑定">
+                    <datalist id="std-keys">
+                        <option value="waybill_no">运单号</option><option value="order_no">订单号</option>
+                        <option value="courier_company">快递公司</option><option value="sort_code">分拣/三段码</option>
+                        <option value="package_code">集包地/大头笔</option>
+                        <option value="receiver_name">收件人姓名</option><option value="receiver_phone">收件人电话</option>
+                        <option value="receiver_address">收件人地址</option><option value="receiver_block">收件人整块</option>
+                        <option value="sender_name">发件人姓名</option><option value="sender_phone">发件人电话</option>
+                        <option value="sender_address">发件人地址</option><option value="sender_block">发件人整块</option>
+                        <option value="goods_name">商品名称</option><option value="quantity">数量</option>
+                        <option value="weight">重量</option><option value="freight">运费</option>
+                        <option value="cod_amount">代收货款</option><option value="insurance">保价金额</option>
+                        <option value="remark">备注</option><option value="print_time">打印时间</option>
+                        <option value="merchant_name">商家名称</option><option value="logo_url">Logo图片</option>
+                        <option value="tracking_url">追踪链接</option>
+                    </datalist>
+                </div>
                 <div class="form-group"><label>标签文字</label><input type="text" id="f-label"></div>
                 <div class="form-group"><label>字段类型</label>
                     <select id="f-type"><option value="text">文本</option><option value="barcode">条形码</option>
@@ -225,8 +261,18 @@
                 <div class="row2">
                     <div class="form-group"><label>字号 (pt)</label><input type="number" id="f-font" min="4" max="72"></div>
                     <div class="form-group"><label>字体</label>
-                        <select id="f-fontfamily"><option>Arial</option><option>SimSun</option><option>SimHei</option>
-                            <option>Microsoft YaHei</option><option>Courier New</option></select>
+                        <select id="f-fontfamily">
+                            <option value="SimSun">宋体 SimSun</option><option value="SimHei">黑体 SimHei</option>
+                            <option value="Microsoft YaHei">微软雅黑</option><option value="KaiTi">楷体 KaiTi</option>
+                            <option value="FangSong">仿宋 FangSong</option><option value="PingFang SC">苹方 PingFang</option>
+                            <option value="Hiragino Sans GB">冬青黑体</option><option value="STHeiti">华文黑体</option>
+                            <option value="STSong">华文宋体</option><option value="STKaiti">华文楷体</option>
+                            <option value="Arial">Arial</option><option value="Helvetica">Helvetica</option>
+                            <option value="Times New Roman">Times New Roman</option><option value="Courier New">Courier New</option>
+                            <option value="Verdana">Verdana</option><option value="Tahoma">Tahoma</option>
+                            <option value="Georgia">Georgia</option><option value="Impact">Impact</option>
+                            <option value="monospace">等宽 monospace</option>
+                        </select>
                     </div>
                 </div>
                 <div class="row2">
@@ -239,8 +285,14 @@
                 <div class="form-group"><label>文本颜色</label>
                     <div class="color-row"><input type="color" id="f-color"><input type="text" id="f-color-text" value="#000000"></div>
                 </div>
-                <div class="form-group"><label>占位/默认内容</label><input type="text" id="f-placeholder" placeholder="留空则显示字段ID"></div>
-                <label class="inline-check"><input type="checkbox" id="f-showlabel"> 显示标签</label>
+                <div class="form-group"><label>占位/默认内容（\n 表示换行）</label><input type="text" id="f-placeholder" placeholder="留空则显示 {{数据键}}"></div>
+                <div class="row2">
+                    <label class="inline-check" style="flex:1"><input type="checkbox" id="f-showlabel"> 显示标签</label>
+                    <div class="form-group" style="flex:1;margin-bottom:0"><select id="f-labelpos">
+                        <option value="inline">标签同行（收件人：xx）</option>
+                        <option value="top">标签在上方</option>
+                    </select></div>
+                </div>
                 <div class="row2">
                     <div class="form-group"><label>标签字号 (pt)</label><input type="number" id="f-labelsize" min="4" max="40"></div>
                     <div class="form-group"><label>标签颜色</label>
@@ -294,9 +346,18 @@
         "100x180": { w: 100, h: 180 }, "A4": { w: 210, h: 297 }
     };
     var PT2PX = 96 / 72;        // 屏幕：pt -> px
-    var MM_TO_PRINT = 96 / 25.4; // 打印：1mm 对应 px（真实物理尺寸）
+    var MM_PX = 96 / 25.4;      // 1mm 对应的 px（真实物理尺寸基准）
+    var MM_TO_PRINT = MM_PX;    // 打印：1mm 对应 px（真实物理尺寸）
 
-    var state = { templates: [], activeId: null, selectedId: null, scale: 1, snap: true, showGrid: true, gridSize: 1 };
+    // state.scale 单位：px / mm。等于 MM_PX 时即 100%（实际尺寸）
+    var state = { templates: [], activeId: null, selectedId: null, scale: MM_PX, snap: true, showGrid: true, gridSize: 1 };
+    function zoomPct() { return Math.round(state.scale / MM_PX * 100); }
+    function setZoomPct(pct, skipRender) {
+        pct = clamp(Math.round(pct), 40, 300);
+        state.scale = pct / 100 * MM_PX;
+        $("zoom").value = pct; $("zoom-val").textContent = pct + "%";
+        if (!skipRender) renderCanvas();
+    }
 
     var $ = function (id) { return document.getElementById(id); };
     var canvas = $("label-canvas");
@@ -326,6 +387,155 @@
     function activeTpl() { return state.templates.find(function (t) { return t.id === state.activeId; }) || null; }
     function getField(id) { var t = activeTpl(); if (!t) return null; return t.fields.find(function (f) { return f.id === id; }) || null; }
 
+    // ---------- 各快递公司预置默认布局（每家不同） ----------
+    function pf(id, label, type, x, y, w, h, o) {
+        return Object.assign({ id: id, label: label, type: type, x: x, y: y, width: w, height: h,
+            font_size: 10, font_family: "SimHei", bold: false, italic: false, align: "left", text_color: "#000000",
+            border_width: 0, border_color: "#000000", background_color: "transparent", show_label: true,
+            label_position: "inline", label_font_size: 8, label_color: "#666666", placeholder: "", data_key: "" }, o || {});
+    }
+    var RECV_PH = "李四 139****0000\n上海市浦东新区xx路2号";
+    var SEND_PH = "张三 138****0000\n北京市朝阳区xx路1号";
+    var COURIER_PRESETS = {
+        ems: { name: "邮政EMS", size: "100x150", fields: function () { return [
+            pf("logo", "Logo", "image", 5, 4, 28, 10, { show_label: false, data_key: "logo_url", placeholder: "EMS LOGO" }),
+            pf("waybill", "运单号", "barcode", 38, 4, 57, 16, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "EA123456789CN" }),
+            pf("sort", "分拣码", "text", 5, 16, 28, 10, { bold: true, font_size: 14, align: "center", show_label: false, data_key: "sort_code", placeholder: "京-朝阳-05" }),
+            pf("receiver", "收", "text", 5, 30, 90, 20, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "寄", "text", 5, 52, 90, 15, { border_width: 1, font_size: 9, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("order", "订单号", "text", 5, 70, 62, 7, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("weight", "重量", "text", 5, 79, 62, 7, { data_key: "weight", placeholder: "1.25 kg" }),
+            pf("freight", "资费", "text", 5, 88, 62, 7, { data_key: "freight", placeholder: "¥ 20.00" }),
+            pf("qrcode", "查询", "qrcode", 70, 70, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码查询" }),
+            pf("line1", "线", "line", 5, 98, 90, 2, { show_label: false }),
+            pf("goods", "内件品名", "text", 5, 102, 90, 18, { border_width: 1, data_key: "goods_name", placeholder: "文件资料 x1" }),
+            pf("remark", "备注", "text", 5, 123, 90, 14, { data_key: "remark", placeholder: "易碎物品，轻拿轻放" }),
+            pf("ptime", "打印时间", "text", 5, 141, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "打印时间：2026-07-28 17:00" })
+        ]; } },
+        sf: { name: "顺丰", size: "100x150", fields: function () { return [
+            pf("logo", "Logo", "image", 5, 3, 26, 9, { show_label: false, data_key: "logo_url", placeholder: "SF 顺丰" }),
+            pf("product", "时效", "text", 72, 3, 23, 9, { bold: true, font_size: 13, align: "center", border_width: 2, show_label: false, data_key: "product_type", placeholder: "标快" }),
+            pf("waybill", "运单号", "barcode", 5, 14, 90, 17, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "SF1234567890123" }),
+            pf("dest", "目的地", "text", 5, 33, 90, 14, { bold: true, font_size: 24, align: "center", show_label: false, data_key: "sort_code", placeholder: "021AB-上海" }),
+            pf("line1", "线", "line", 5, 49, 90, 2, { show_label: false }),
+            pf("receiver", "收", "text", 5, 52, 90, 19, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "寄", "text", 5, 73, 90, 15, { font_size: 9, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("line2", "线", "line", 5, 90, 90, 2, { show_label: false }),
+            pf("order", "订单号", "text", 5, 94, 62, 7, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("weight", "计费重量", "text", 5, 103, 62, 7, { data_key: "weight", placeholder: "2.0 kg" }),
+            pf("cod", "代收货款", "text", 5, 112, 62, 7, { bold: true, data_key: "cod_amount", placeholder: "¥ 0.00" }),
+            pf("qrcode", "签收", "qrcode", 70, 94, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码签收" }),
+            pf("remark", "备注", "text", 5, 122, 90, 14, { border_width: 1, data_key: "remark", placeholder: "" }),
+            pf("ptime", "打印时间", "text", 5, 140, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "2026-07-28 17:00 已验视" })
+        ]; } },
+        zto: { name: "中通", size: "100x150", fields: function () { return [
+            pf("sort3", "三段码", "text", 5, 4, 90, 15, { bold: true, font_size: 26, align: "center", show_label: false, data_key: "sort_code", placeholder: "310-05-21" }),
+            pf("line1", "线", "line", 5, 21, 90, 2, { show_label: false }),
+            pf("receiver", "收", "text", 5, 25, 90, 20, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "发", "text", 5, 47, 90, 13, { font_size: 8, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("waybill", "运单号", "barcode", 5, 62, 90, 20, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "75123456789012" }),
+            pf("pkg", "集包地", "text", 5, 85, 55, 12, { bold: true, font_size: 15, show_label: false, data_key: "package_code", placeholder: "上海转运中心" }),
+            pf("qrcode", "码", "qrcode", 70, 85, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码取件" }),
+            pf("goods", "物品", "text", 5, 99, 60, 10, { data_key: "goods_name", placeholder: "日用品 x2" }),
+            pf("line2", "线", "line", 5, 112, 90, 2, { show_label: false }),
+            pf("order", "订单", "text", 5, 116, 90, 7, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("remark", "备注", "text", 5, 125, 90, 13, { border_width: 1, data_key: "remark", placeholder: "" }),
+            pf("ptime", "时间", "text", 5, 141, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "2026-07-28 17:00" })
+        ]; } },
+        yto: { name: "韵达", size: "100x150", fields: function () { return [
+            pf("bigpen", "大头笔", "text", 5, 4, 34, 24, { bold: true, font_size: 22, align: "center", border_width: 2, show_label: false, data_key: "package_code", placeholder: "沪A-08" }),
+            pf("waybill", "运单号", "barcode", 43, 4, 52, 24, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "43124300012345" }),
+            pf("receiver", "收", "text", 5, 31, 90, 20, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "发", "text", 5, 53, 90, 13, { font_size: 8, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("line1", "线", "line", 5, 68, 90, 2, { show_label: false }),
+            pf("sort", "三段码", "text", 5, 72, 60, 12, { bold: true, font_size: 16, show_label: false, data_key: "sort_code", placeholder: "201-02-08" }),
+            pf("qrcode", "码", "qrcode", 70, 72, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码查询" }),
+            pf("goods", "品名", "text", 5, 86, 60, 9, { data_key: "goods_name", placeholder: "服饰 x1" }),
+            pf("weight", "重量", "text", 5, 97, 60, 7, { data_key: "weight", placeholder: "0.8 kg" }),
+            pf("order", "订单", "text", 5, 106, 90, 7, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("remark", "备注", "text", 5, 116, 90, 20, { border_width: 1, data_key: "remark", placeholder: "" }),
+            pf("ptime", "时间", "text", 5, 140, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "2026-07-28 17:00" })
+        ]; } },
+        sto: { name: "申通", size: "100x150", fields: function () { return [
+            pf("waybill", "运单号", "barcode", 5, 4, 90, 18, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "773123456789012" }),
+            pf("sort", "分拣", "text", 5, 25, 90, 13, { bold: true, font_size: 22, align: "center", background_color: "#f2f2f2", show_label: false, data_key: "sort_code", placeholder: "021-56-08" }),
+            pf("receiver", "收", "text", 5, 41, 90, 20, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "发", "text", 5, 63, 90, 13, { font_size: 8, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("line1", "线", "line", 5, 78, 90, 2, { show_label: false }),
+            pf("goods", "品名", "text", 5, 82, 60, 9, { data_key: "goods_name", placeholder: "数码配件 x1" }),
+            pf("weight", "重量", "text", 5, 93, 60, 7, { data_key: "weight", placeholder: "0.5 kg" }),
+            pf("cod", "到付款", "text", 5, 102, 60, 7, { bold: true, data_key: "cod_amount", placeholder: "¥ 0.00" }),
+            pf("qrcode", "码", "qrcode", 70, 82, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码查询" }),
+            pf("order", "订单", "text", 5, 111, 90, 7, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("remark", "备注", "text", 5, 120, 90, 16, { border_width: 1, data_key: "remark", placeholder: "" }),
+            pf("ptime", "时间", "text", 5, 140, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "2026-07-28 17:00" })
+        ]; } },
+        yt: { name: "圆通", size: "100x150", fields: function () { return [
+            pf("pkg", "集包地", "text", 5, 4, 90, 13, { bold: true, font_size: 22, align: "center", show_label: false, data_key: "package_code", placeholder: "上海青浦集包" }),
+            pf("waybill", "运单号", "barcode", 5, 19, 90, 17, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "YT7512345678901" }),
+            pf("receiver", "收", "text", 5, 39, 44, 26, { bold: true, border_width: 1, font_size: 10, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "发", "text", 51, 39, 44, 26, { border_width: 1, font_size: 8, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("sort", "三段码", "text", 5, 68, 60, 12, { bold: true, font_size: 16, show_label: false, data_key: "sort_code", placeholder: "201-06-12" }),
+            pf("qrcode", "码", "qrcode", 70, 68, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码查询" }),
+            pf("goods", "品名", "text", 5, 82, 60, 9, { data_key: "goods_name", placeholder: "食品 x3" }),
+            pf("weight", "重量", "text", 5, 93, 60, 7, { data_key: "weight", placeholder: "1.5 kg" }),
+            pf("order", "订单", "text", 5, 102, 90, 7, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("line1", "线", "line", 5, 111, 90, 2, { show_label: false }),
+            pf("remark", "备注", "text", 5, 115, 90, 21, { border_width: 1, data_key: "remark", placeholder: "" }),
+            pf("ptime", "时间", "text", 5, 140, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "2026-07-28 17:00" })
+        ]; } },
+        jd: { name: "京东", size: "100x150", fields: function () { return [
+            pf("logo", "Logo", "image", 5, 3, 30, 9, { show_label: false, data_key: "logo_url", placeholder: "JD 京东物流" }),
+            pf("product", "产品", "text", 70, 3, 25, 9, { bold: true, font_size: 12, align: "center", border_width: 1, show_label: false, data_key: "product_type", placeholder: "特快送" }),
+            pf("sort", "分拣", "text", 5, 14, 90, 14, { bold: true, font_size: 24, align: "center", show_label: false, data_key: "sort_code", placeholder: "沪01-A32" }),
+            pf("waybill", "运单号", "barcode", 5, 30, 90, 17, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "JDV012345678901" }),
+            pf("receiver", "收", "text", 5, 50, 90, 20, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "寄", "text", 5, 72, 90, 13, { font_size: 8, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("order", "订单号", "barcode", 5, 87, 60, 16, { show_label: false, data_key: "order_no", placeholder: "订单 289012345678" }),
+            pf("qrcode", "码", "qrcode", 70, 87, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码查件" }),
+            pf("goods", "商品", "text", 5, 106, 60, 9, { data_key: "goods_name", placeholder: "家电配件 x1" }),
+            pf("weight", "重量", "text", 5, 117, 60, 7, { data_key: "weight", placeholder: "3.2 kg" }),
+            pf("remark", "备注", "text", 5, 126, 90, 12, { border_width: 1, data_key: "remark", placeholder: "" }),
+            pf("ptime", "时间", "text", 5, 140, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "2026-07-28 17:00 打包员:007" })
+        ]; } },
+        db: { name: "德邦", size: "100x180", fields: function () { return [
+            pf("logo", "Logo", "image", 5, 4, 32, 10, { show_label: false, data_key: "logo_url", placeholder: "德邦快递" }),
+            pf("product", "产品", "text", 66, 4, 29, 10, { bold: true, font_size: 12, align: "center", border_width: 2, show_label: false, data_key: "product_type", placeholder: "大件360" }),
+            pf("waybill", "运单号", "barcode", 5, 17, 90, 18, { align: "center", show_label: false, data_key: "waybill_no", placeholder: "DPK123456789012" }),
+            pf("dest", "目的站", "text", 5, 38, 90, 14, { bold: true, font_size: 22, align: "center", show_label: false, data_key: "sort_code", placeholder: "上海-青浦-03部" }),
+            pf("receiver", "收", "text", 5, 55, 90, 22, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "发", "text", 5, 79, 90, 16, { font_size: 9, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("line1", "线", "line", 5, 97, 90, 2, { show_label: false }),
+            pf("pieces", "件数", "text", 5, 101, 44, 10, { bold: true, font_size: 14, data_key: "quantity", placeholder: "1/3 件" }),
+            pf("weight", "重量", "text", 51, 101, 44, 10, { bold: true, font_size: 14, data_key: "weight", placeholder: "45 kg" }),
+            pf("freight", "运费", "text", 5, 113, 44, 8, { data_key: "freight", placeholder: "¥ 128.00" }),
+            pf("cod", "代收", "text", 51, 113, 44, 8, { data_key: "cod_amount", placeholder: "¥ 0.00" }),
+            pf("qrcode", "码", "qrcode", 70, 124, 25, 25, { show_label: false, data_key: "tracking_url", placeholder: "扫码查询" }),
+            pf("goods", "品名", "text", 5, 124, 60, 12, { border_width: 1, data_key: "goods_name", placeholder: "机械设备（木架包装）" }),
+            pf("order", "订单", "text", 5, 139, 60, 7, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("remark", "备注", "text", 5, 150, 90, 20, { border_width: 1, data_key: "remark", placeholder: "送货上楼，提前电联" }),
+            pf("ptime", "时间", "text", 5, 172, 90, 6, { font_size: 7, text_color: "#666666", show_label: false, data_key: "print_time", placeholder: "2026-07-28 17:00" })
+        ]; } }
+    };
+    function newTemplateFromPreset(code) {
+        var p = COURIER_PRESETS[code]; if (!p) return;
+        var t = defaultTemplate(p.name + "预置面单", $("merchant-filter").value || "", code, p.size);
+        t.fields = p.fields();
+        state.templates.push(t); state.activeId = t.id; state.selectedId = null;
+        persist(); syncTplForm(); syncPropPanel(); renderTemplateList(); autoFit();
+        toast("已按「" + p.name + "」预置布局创建模板，各字段已绑定数据键");
+    }
+    function renderPresetGrid() {
+        var g = $("preset-grid"); if (!g) return; g.innerHTML = "";
+        Object.keys(COURIER_PRESETS).forEach(function (code) {
+            var b = document.createElement("button"); b.type = "button";
+            b.textContent = COURIER_PRESETS[code].name;
+            b.title = "按" + COURIER_PRESETS[code].name + "默认布局新建模板（" + COURIER_PRESETS[code].size + "）";
+            b.onclick = function () { newTemplateFromPreset(code); };
+            g.appendChild(b);
+        });
+    }
+
     // ---------- 持久化 ----------
     var saveTimer = null;
     function persist() {
@@ -344,8 +554,15 @@
         if (!state.activeId && state.templates[0]) state.activeId = state.templates[0].id;
     }
     function seedDefault() {
-        var tpl = defaultTemplate("EMS标准面单", "示例商家", "ems", "100x150");
-        tpl.isDefault = true; state.templates.push(tpl); state.activeId = tpl.id;
+        // 首次使用：为每家快递各生成一份预置面单模板（布局互不相同）
+        Object.keys(COURIER_PRESETS).forEach(function (code) {
+            var p = COURIER_PRESETS[code];
+            var tpl = defaultTemplate(p.name + "预置面单", "", code, p.size);
+            tpl.fields = p.fields();
+            state.templates.push(tpl);
+        });
+        if (state.templates[0]) { state.templates[0].isDefault = true; state.activeId = state.templates[0].id; }
+        persist();
     }
     function defaultTemplate(name, merchant, courier, size) {
         return { id: uid("tpl"), name: name || "未命名模板", merchant: merchant || "", courier: courier || "ems",
@@ -353,21 +570,16 @@
             isDefault: false, updatedAt: Date.now(), fields: defaultFields() };
     }
     function defaultFields() {
-        function f(o) { return Object.assign({
-            id: uid("f"), label: "", type: "text", x: 10, y: 10, width: 40, height: 10, font_size: 10,
-            font_family: "Arial", bold: false, italic: false, align: "left", text_color: "#000000",
-            border_width: 0, border_color: "#000000", background_color: "transparent", show_label: true,
-            label_font_size: 8, label_color: "#666666", placeholder: "" }, o); }
         return [
-            f({ id: "logo", label: "快递Logo", type: "image", x: 5, y: 5, width: 30, height: 10, show_label: false }),
-            f({ id: "sender", label: "发件人", type: "text", x: 5, y: 18, width: 45, height: 30, bold: true, border_width: 1, placeholder: "张三 / 13800000000\n北京市朝阳区xx路1号" }),
-            f({ id: "receiver", label: "收件人", type: "text", x: 55, y: 18, width: 40, height: 30, bold: true, border_width: 1, placeholder: "李四 / 13900000000\n上海市浦东新区xx路2号" }),
-            f({ id: "barcode", label: "运单号", type: "barcode", x: 5, y: 52, width: 60, height: 26, align: "center", border_width: 1, placeholder: "1234567890123" }),
-            f({ id: "qrcode", label: "二维码", type: "qrcode", x: 70, y: 52, width: 25, height: 26, border_width: 1, placeholder: "https://trace.example.com/123" }),
-            f({ id: "order", label: "订单号", type: "text", x: 5, y: 82, width: 90, height: 8, placeholder: "OD202401010001" }),
-            f({ id: "remark", label: "备注", type: "text", x: 5, y: 94, width: 90, height: 20, border_width: 1, placeholder: "易碎物品，轻拿轻放" }),
-            f({ id: "line", label: "分割线", type: "line", x: 5, y: 118, width: 90, height: 2 }),
-            f({ id: "cost", label: "费用", type: "text", x: 5, y: 124, width: 90, height: 8, align: "right", bold: true, placeholder: "¥ 20.00" })
+            pf("logo", "快递Logo", "image", 5, 5, 30, 10, { show_label: false, data_key: "logo_url" }),
+            pf("receiver", "收件人", "text", 5, 18, 90, 20, { bold: true, border_width: 1, font_size: 11, data_key: "receiver_block", placeholder: RECV_PH }),
+            pf("sender", "发件人", "text", 5, 40, 90, 14, { font_size: 9, data_key: "sender_block", placeholder: SEND_PH }),
+            pf("barcode", "运单号", "barcode", 5, 57, 60, 24, { align: "center", border_width: 1, show_label: false, data_key: "waybill_no", placeholder: "1234567890123" }),
+            pf("qrcode", "二维码", "qrcode", 70, 57, 25, 24, { border_width: 1, show_label: false, data_key: "tracking_url", placeholder: "扫码追踪" }),
+            pf("order", "订单号", "text", 5, 85, 90, 8, { data_key: "order_no", placeholder: "OD202601010001" }),
+            pf("remark", "备注", "text", 5, 96, 90, 20, { border_width: 1, data_key: "remark", placeholder: "易碎物品，轻拿轻放" }),
+            pf("line", "分割线", "line", 5, 120, 90, 2, { show_label: false }),
+            pf("cost", "费用", "text", 5, 125, 90, 8, { align: "right", bold: true, data_key: "freight", placeholder: "¥ 20.00" })
         ];
     }
 
@@ -395,7 +607,12 @@
             li.querySelector('[data-act="load"]').onclick = function () { loadTemplate(t.id); };
             li.querySelector('[data-act="default"]').onclick = function () { toggleDefault(t.id); };
             li.querySelector('[data-act="dup"]').onclick = function () { duplicateTemplate(t.id); };
-            li.querySelector('[data-act="del"]').onclick = function () { deleteTemplate(t.id); };
+            li.querySelector('[data-act="del"]').onclick = function () {
+                var b = this;
+                if (b.dataset.arm === "1") { deleteTemplate(t.id); return; }
+                b.dataset.arm = "1"; b.textContent = "确认删除?"; b.style.background = "#fdeef1";
+                setTimeout(function () { if (b.isConnected) { b.dataset.arm = ""; b.textContent = "删除"; b.style.background = ""; } }, 3000);
+            };
             list.appendChild(li);
         });
         renderMerchantFilter();
@@ -447,7 +664,7 @@
         el.style.left = (f.x * state.scale) + "px"; el.style.top = (f.y * state.scale) + "px";
         el.style.width = (f.width * state.scale) + "px"; el.style.height = (f.height * state.scale) + "px";
         el.style.fontFamily = f.font_family || "Arial";
-        el.style.fontSize = ((f.font_size || 10) * state.scale * PT2PX) + "px";
+        el.style.fontSize = ((f.font_size || 10) * PT2PX * (state.scale / MM_PX)) + "px";
         el.style.fontWeight = f.bold ? "bold" : "normal";
         el.style.fontStyle = f.italic ? "italic" : "normal";
         el.style.textAlign = f.align || "left";
@@ -456,25 +673,29 @@
         if (f.background_color && f.background_color !== "transparent") el.style.background = f.background_color;
     }
     function fieldInnerHTML(f) {
-        var labelHtml = f.show_label ? '<div class="field-label" style="font-size:' +
-            ((f.label_font_size || 8) * state.scale * PT2PX) + 'px;color:' + (f.label_color || "#666") + '">' +
-            esc(f.label || f.id) + '</div>' : "";
-        var content, ph = f.placeholder || ("{{" + f.id + "}}");
-        if (f.type === "barcode") content = '<div class="field-content">' + esc(ph) + '<div class="barcode-vis"></div></div>';
+        var scaleF = state.scale / MM_PX;
+        var ph = f.placeholder || ("{{" + (f.data_key || f.id) + "}}");
+        var labelStyle = 'font-size:' + ((f.label_font_size || 8) * PT2PX * scaleF) + 'px;color:' + (f.label_color || "#666");
+        var inline = f.show_label && f.label_position === "inline";
+        var labelHtml = (f.show_label && !inline) ? '<div class="field-label" style="' + labelStyle + '">' + esc(f.label || f.id) + '</div>' : "";
+        var inlinePrefix = inline ? '<span class="inl-label" style="' + labelStyle + '">' + esc(f.label || f.id) + '：</span>' : "";
+        var content;
+        if (f.type === "barcode") content = '<div class="field-content">' + inlinePrefix + esc(ph) + '<div class="barcode-vis"></div></div>';
         else if (f.type === "qrcode") {
             var cells = ""; for (var i = 0; i < 25; i++) cells += '<i class="' + ((i * 7 + 3) % 5 === 0 ? "off" : "") + '"></i>';
-            content = '<div class="field-content">' + esc(ph) + '<div class="qrcode-vis">' + cells + '</div></div>';
+            content = '<div class="field-content">' + inlinePrefix + esc(ph) + '<div class="qrcode-vis">' + cells + '</div></div>';
         } else if (f.type === "image") content = '<div class="img-vis">' + esc(ph) + '</div>';
         else if (f.type === "line") content = '<div class="line-vis" style="border-top-color:' + (f.text_color || "#333") + '"></div>';
         else if (f.type === "rect") content = '<div class="field-content" style="border:' + ((f.border_width || 1)) +
             'px solid ' + (f.border_color || "#000") + ';width:100%;height:100%;box-sizing:border-box">' +
             (ph && ph.indexOf("{{") !== 0 ? esc(ph) : "") + '</div>';
-        else content = '<div class="field-content">' + esc(ph) + '</div>';
-        return labelHtml + content;
+        else content = '<div class="field-content">' + inlinePrefix + esc(ph) + '</div>';
+        var dk = f.data_key ? '<span class="dk-badge">{{' + esc(f.data_key) + '}}</span>' : "";
+        return labelHtml + content + dk;
     }
     function updateCanvasInfo() {
         var t = activeTpl(); if (!t) return; var sz = sizeOf(t);
-        $("canvas-info").textContent = "尺寸 " + sz.w + "×" + sz.h + " mm · 字段 " + t.fields.length + " 个 · 缩放 " + Math.round(state.scale * 100) + "%";
+        $("canvas-info").textContent = "尺寸 " + sz.w + "×" + sz.h + " mm · 字段 " + t.fields.length + " 个 · 缩放 " + zoomPct() + "%（100% = 实际尺寸）";
     }
 
     // ---------- 选择 / 属性 ----------
@@ -487,12 +708,13 @@
         var f = getField(state.selectedId);
         if (!f) { $("no-selection").hidden = false; $("prop-panel").hidden = true; return; }
         $("no-selection").hidden = true; $("prop-panel").hidden = false;
-        $("f-id").value = f.id; $("f-label").value = f.label || ""; $("f-type").value = f.type;
+        $("f-id").value = f.id; $("f-datakey").value = f.data_key || ""; $("f-label").value = f.label || ""; $("f-type").value = f.type;
+        $("f-labelpos").value = f.label_position === "inline" ? "inline" : "top";
         $("f-x").value = round1(f.x); $("f-y").value = round1(f.y); $("f-w").value = round1(f.width); $("f-h").value = round1(f.height);
         $("f-font").value = f.font_size || 10; $("f-fontfamily").value = f.font_family || "Arial";
         $("f-bold").checked = !!f.bold; $("f-italic").checked = !!f.italic; $("f-align").value = f.align || "left";
         setColor("f-color", "f-color-text", f.text_color || "#000000");
-        $("f-placeholder").value = f.placeholder || ""; $("f-showlabel").checked = f.show_label !== false;
+        $("f-placeholder").value = (f.placeholder || "").replace(/\n/g, "\\n"); $("f-showlabel").checked = f.show_label !== false;
         $("f-labelsize").value = f.label_font_size || 8; setColor("f-labelcolor", "f-labelcolor-text", f.label_color || "#666666");
         $("f-border").value = f.border_width || 0; setColor("f-bordercolor", "f-bordercolor-text", f.border_color || "#000000");
         setColor("f-bgcolor", "f-bgcolor-text", f.background_color || "transparent");
@@ -504,12 +726,13 @@
     }
     function applyPropChange() {
         var f = getField(state.selectedId); if (!f) return;
-        f.id = $("f-id").value || f.id; f.label = $("f-label").value; f.type = $("f-type").value;
+        f.id = $("f-id").value || f.id; f.data_key = $("f-datakey").value.trim();
+        f.label = $("f-label").value; f.type = $("f-type").value; f.label_position = $("f-labelpos").value;
         f.x = snap(clamp(parseFloat($("f-x").value) || 0, 0, 9999)); f.y = snap(clamp(parseFloat($("f-y").value) || 0, 0, 9999));
         f.width = Math.max(3, snap(parseFloat($("f-w").value) || 3)); f.height = Math.max(3, snap(parseFloat($("f-h").value) || 3));
         f.font_size = clamp(parseInt($("f-font").value) || 10, 4, 72); f.font_family = $("f-fontfamily").value;
         f.bold = $("f-bold").checked; f.italic = $("f-italic").checked; f.align = $("f-align").value;
-        f.text_color = $("f-color-text").value; f.placeholder = $("f-placeholder").value; f.show_label = $("f-showlabel").checked;
+        f.text_color = $("f-color-text").value; f.placeholder = $("f-placeholder").value.replace(/\\n/g, "\n"); f.show_label = $("f-showlabel").checked;
         f.label_font_size = clamp(parseInt($("f-labelsize").value) || 8, 4, 40); f.label_color = $("f-labelcolor-text").value;
         f.border_width = clamp(parseInt($("f-border").value) || 0, 0, 10); f.border_color = $("f-bordercolor-text").value;
         f.background_color = $("f-bgcolor-text").value;
@@ -528,14 +751,30 @@
     function touch() { var t = activeTpl(); if (t) t.updatedAt = Date.now(); persist(); }
 
     // ---------- 字段操作 ----------
-    function addField(type, label, x, y) {
+    function uniqueFieldId(base) {
+        var t = activeTpl(); if (!t) return base;
+        var id = base, n = 2;
+        while (t.fields.some(function (f) { return f.id === id; })) id = base + "_" + (n++);
+        return id;
+    }
+    function addField(type, label, x, y, preset) {
+        preset = preset || {};
         var f = {
-            id: uid("f"), label: label || typeName(type), type: type,
-            x: snap(x), y: snap(y), width: type === "qrcode" ? 22 : 40, height: type === "line" ? 2 : (type === "rect" ? 20 : 10),
-            font_size: 10, font_family: "Arial", bold: false, italic: false, align: "left", text_color: "#000000",
-            border_width: type === "rect" ? 1 : 0, border_color: "#000000", background_color: "transparent",
-            show_label: type !== "image" && type !== "line", label_font_size: 8, label_color: "#666666",
-            placeholder: defaultPlaceholder(type)
+            id: preset.id ? uniqueFieldId(String(preset.id)) : uid("f"),
+            label: label || typeName(type), type: type,
+            x: snap(x), y: snap(y),
+            width: preset.width || (type === "qrcode" ? 22 : 40),
+            height: preset.height || (type === "line" ? 2 : (type === "rect" ? 20 : 10)),
+            font_size: preset.font_size || 10, font_family: preset.font_family || "Arial",
+            bold: !!preset.bold, italic: !!preset.italic, align: preset.align || "left",
+            text_color: preset.text_color || "#000000",
+            border_width: preset.border_width != null ? preset.border_width : (type === "rect" ? 1 : 0),
+            border_color: preset.border_color || "#000000", background_color: preset.background_color || "transparent",
+            show_label: preset.show_label != null ? !!preset.show_label : (type !== "image" && type !== "line"),
+            label_position: preset.label_position || "inline",
+            label_font_size: preset.label_font_size || 8, label_color: preset.label_color || "#666666",
+            placeholder: preset.placeholder || defaultPlaceholder(type),
+            data_key: preset.data_key || ""
         };
         var t = activeTpl(); if (!t) return;
         var sz = sizeOf(t);
@@ -570,7 +809,7 @@
         var rect = canvas.getBoundingClientRect();
         var x = (e.clientX - rect.left) / state.scale;
         var y = (e.clientY - rect.top) / state.scale;
-        addField(data.type, data.label, x - 20, y - 5);
+        addField(data.type, data.label, x - 20, y - 5, data.custom || null);
     }
     function onFieldMouseDown(e) {
         var handle = e.target.classList.contains("handle") ? e.target : null;
@@ -625,7 +864,7 @@
     }
     function loadTemplate(id) {
         state.activeId = id; state.selectedId = null;
-        syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList();
+        persist(); syncTplForm(); syncPropPanel(); renderTemplateList(); autoFit();
         toast("已载入：" + (activeTpl() && activeTpl().name));
     }
     function saveTemplate() {
@@ -639,9 +878,14 @@
         persist(); renderTemplateList(); toast("模板已保存：" + t.name);
     }
     function newTemplate() {
-        var t = defaultTemplate("新模板 " + (state.templates.length + 1), "", "ems", "100x150");
+        // 新建时按当前所选快递公司套用其预置布局（各家模板对应各家面单）
+        var code = $("tpl-courier").value || "ems";
+        var p = COURIER_PRESETS[code];
+        var t = defaultTemplate("新模板 " + (state.templates.length + 1), $("tpl-merchant").value.trim(), code, p ? p.size : "100x150");
+        if (p) t.fields = p.fields();
         state.templates.push(t); state.activeId = t.id; state.selectedId = null;
-        syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList();
+        persist(); syncTplForm(); syncPropPanel(); renderTemplateList(); autoFit();
+        toast(p ? ("已按「" + p.name + "」布局新建模板") : "已新建模板");
     }
     function duplicateTemplate(id) {
         var src = state.templates.find(function (t) { return t.id === id; }); if (!src) return;
@@ -649,16 +893,19 @@
         copy.name = src.name + " 副本"; copy.isDefault = false; copy.updatedAt = Date.now();
         copy.fields.forEach(function (f) { f.id = uid("f"); });
         state.templates.push(copy); state.activeId = copy.id; state.selectedId = null;
-        syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList(); toast("已复制模板");
+        persist(); syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList(); toast("已复制模板");
     }
     function deleteTemplate(id) {
-        if (!confirm("确定删除该模板？此操作不可撤销。")) return;
+        // 不用 confirm()（内嵌浏览器会拦截导致"删不掉"），由列表按钮二次点击确认后直接删
         var i = state.templates.findIndex(function (t) { return t.id === id; });
         if (i < 0) return;
+        var name = state.templates[i].name;
         state.templates.splice(i, 1);
         if (state.activeId === id) state.activeId = state.templates[0] ? state.templates[0].id : null;
         if (!state.activeId) seedDefault();
-        state.selectedId = null; syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList();
+        state.selectedId = null;
+        persist(); syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList();
+        toast("已删除模板：" + name);
     }
     function toggleDefault(id) {
         var t = state.templates.find(function (x) { return x.id === id; }); if (!t) return;
@@ -695,15 +942,18 @@
             el.style.textAlign = f.align || "left"; el.style.color = f.text_color || "#000";
             if (f.type !== "line" && f.type !== "rect") el.style.border = (f.border_width || 0) + "px solid " + (f.border_color || "#000");
             if (f.background_color && f.background_color !== "transparent") el.style.background = f.background_color;
-            var ph = f.placeholder || ("{{" + f.id + "}}");
+            var ph = f.placeholder || ("{{" + (f.data_key || f.id) + "}}");
+            var pvInline = f.show_label && f.label_position === "inline";
+            var pvLabelStyle = 'font-size:' + (f.label_font_size || 8) + 'pt;color:' + (f.label_color || "#666");
+            var pvPrefix = pvInline ? '<span style="' + pvLabelStyle + '">' + esc(f.label || f.id) + '：</span>' : "";
             var inner = "";
-            if (f.show_label) inner += '<div style="font-size:' + (f.label_font_size || 8) + 'pt;color:' + (f.label_color || "#666") + '">' + esc(f.label || f.id) + '</div>';
-            if (f.type === "barcode") inner += '<div>' + esc(ph) + '</div><div style="height:60%;background:repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 4px);margin-top:3px"></div>';
-            else if (f.type === "qrcode") inner += '<div>' + esc(ph) + '</div><div style="width:55%;height:55%;margin:4px auto 0;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:1px;background:#eee">' + qrcodeCells() + '</div>';
+            if (f.show_label && !pvInline) inner += '<div style="' + pvLabelStyle + '">' + esc(f.label || f.id) + '</div>';
+            if (f.type === "barcode") inner += '<div>' + pvPrefix + esc(ph) + '</div><div style="height:60%;background:repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 4px);margin-top:3px"></div>';
+            else if (f.type === "qrcode") inner += '<div>' + pvPrefix + esc(ph) + '</div><div style="width:55%;height:55%;margin:4px auto 0;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:1px;background:#eee">' + qrcodeCells() + '</div>';
             else if (f.type === "image") inner += '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f3f5f8;border:1px dashed #c2ccd6;color:#9aa6b2">' + esc(ph) + '</div>';
             else if (f.type === "line") inner += '<div style="border-top:2px solid ' + (f.text_color || "#333") + '"></div>';
             else if (f.type === "rect") inner += '<div style="border:' + (f.border_width || 1) + 'px solid ' + (f.border_color || "#000") + ';width:100%;height:100%;box-sizing:border-box">' + (ph.indexOf("{{") !== 0 ? esc(ph) : "") + '</div>';
-            else inner += '<div>' + esc(ph) + '</div>';
+            else inner += '<div>' + pvPrefix + esc(ph) + '</div>';
             el.innerHTML = inner;
             paper.appendChild(el);
         });
@@ -747,28 +997,118 @@
                             return Object.assign({ id: uid("f"), label: "", type: "text", x: 10, y: 10, width: 40, height: 10,
                                 font_size: 10, font_family: "Arial", bold: false, italic: false, align: "left", text_color: "#000000",
                                 border_width: 0, border_color: "#000000", background_color: "transparent", show_label: true,
-                                label_font_size: 8, label_color: "#666666", placeholder: "" }, f);
+                                label_position: "inline", label_font_size: 8, label_color: "#666666", placeholder: "", data_key: "" }, f);
                         });
                     }
                     state.templates.push(t); state.activeId = t.id; state.selectedId = null;
-                    syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList(); toast("已导入模板");
-                } catch (err) { alert("JSON 解析失败：" + err.message); }
+                    persist(); syncTplForm(); renderCanvas(); syncPropPanel(); renderTemplateList(); toast("已导入模板");
+                } catch (err) { toast("JSON 解析失败：" + err.message); }
             };
             r.readAsText(file);
         };
         inp.click();
     }
 
+    // ---------- 后台自定义字段库 ----------
+    // 字段定义：{ id/key, label, type?, icon?, placeholder?, width?, height?, font_size?, bold?, align?, ... }
+    var customFields = [];
+    function normalizeCustomField(cf) {
+        if (!cf || typeof cf !== "object") return null;
+        var id = cf.id || cf.key || cf.name; if (!id) return null;
+        var out = {
+            id: String(id), label: cf.label || cf.title || String(id),
+            type: ["text", "barcode", "qrcode", "image", "line", "rect"].indexOf(cf.type) >= 0 ? cf.type : "text",
+            icon: cf.icon || "◆", placeholder: cf.placeholder || cf.sample || cf.example || "",
+            data_key: String(cf.data_key || cf.bind || id), label_position: cf.label_position === "top" ? "top" : "inline"
+        };
+        ["width", "height", "font_size", "label_font_size", "border_width"].forEach(function (k) {
+            if (cf[k] != null && isFinite(+cf[k])) out[k] = +cf[k];
+        });
+        ["bold", "italic", "show_label"].forEach(function (k) { if (cf[k] != null) out[k] = !!cf[k]; });
+        ["align", "font_family", "text_color", "border_color", "background_color", "label_color"].forEach(function (k) {
+            if (cf[k]) out[k] = String(cf[k]);
+        });
+        return out;
+    }
+    function setCustomFields(list) {
+        customFields = (Array.isArray(list) ? list : []).map(normalizeCustomField).filter(Boolean);
+        renderCustomLibrary();
+        return customFields.length;
+    }
+    function renderCustomLibrary() {
+        var block = $("custom-fields-block"), lib = $("custom-field-library");
+        lib.innerHTML = "";
+        if (!customFields.length) { block.hidden = true; return; }
+        block.hidden = false;
+        customFields.forEach(function (cf) {
+            var d = document.createElement("div");
+            d.className = "lib-item"; d.draggable = true; d.dataset.type = cf.type;
+            d.title = "字段ID：" + cf.id + (cf.placeholder ? "\n示例：" + cf.placeholder : "");
+            d.innerHTML = '<span class="ico">' + esc(cf.icon) + '</span>' + esc(cf.label);
+            d.addEventListener("dragstart", function (e) {
+                e.dataTransfer.setData("text/plain", JSON.stringify({ type: cf.type, label: cf.label, custom: cf }));
+            });
+            lib.appendChild(d);
+        });
+    }
+    function loadCustomFieldSources() {
+        // 1) 页面内全局配置：window.LABEL_DESIGNER_CONFIG = { customFields: [...] }
+        var cfg = window.LABEL_DESIGNER_CONFIG;
+        if (cfg && Array.isArray(cfg.customFields)) setCustomFields(cfg.customFields);
+        // 2) URL 参数拉取：label_editor.html?fields_url=/api/label-fields.json
+        var url = null;
+        try { url = new URLSearchParams(location.search).get("fields_url"); } catch (e) {}
+        if (url && window.fetch) {
+            fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+                var list = Array.isArray(d) ? d : (d && (d.fields || d.data)) || [];
+                var n = setCustomFields(list);
+                toast(n ? ("已从后台加载 " + n + " 个自定义字段") : "后台字段列表为空");
+            }).catch(function (err) { toast("自定义字段加载失败：" + err.message); });
+        }
+        // 3) 宿主页面 postMessage 注入（适合 iframe 嵌入后台系统）
+        window.addEventListener("message", function (e) {
+            var d = e.data;
+            if (d && d.type === "label-designer:set-fields" && Array.isArray(d.fields)) {
+                var n = setCustomFields(d.fields);
+                toast("已接收后台字段 " + n + " 个");
+            }
+        });
+    }
+    // 4) 对外 JS API
+    window.LabelDesigner = {
+        setCustomFields: setCustomFields,
+        getCustomFields: function () { return JSON.parse(JSON.stringify(customFields)); },
+        getActiveTemplate: function () { var t = activeTpl(); return t ? JSON.parse(JSON.stringify(t)) : null; },
+        getTemplates: function () { return JSON.parse(JSON.stringify(state.templates)); },
+        // 后端对接：取当前模板所有字段的数据绑定（id ↔ data_key），渲染时把 {{data_key}} 替换为真实值
+        getFieldBindings: function () {
+            var t = activeTpl(); if (!t) return [];
+            return t.fields.filter(function (f) { return f.data_key; }).map(function (f) {
+                return { id: f.id, data_key: f.data_key, type: f.type, label: f.label || "" };
+            });
+        },
+        newTemplateFromPreset: newTemplateFromPreset,
+        loadTemplate: loadTemplate,
+        autoFit: autoFit
+    };
+
     // ---------- 初始化与事件绑定 ----------
+    var userZoomed = false; // 用户手动缩放后，窗口变化不再自动覆盖
     function autoFit() {
         var t = activeTpl(); if (!t) return; var sz = sizeOf(t);
         var availW = canvasWrap.clientWidth - 60, availH = canvasWrap.clientHeight - 60;
-        var s = clamp(Math.min(availW / sz.w, availH / sz.h, 2), 0.4, 2);
-        state.scale = s; $("zoom").value = Math.round(s * 100); $("zoom-val").textContent = Math.round(s * 100) + "%";
-        renderCanvas();
+        if (availW <= 0 || availH <= 0) return;
+        var s = Math.min(availW / sz.w, availH / sz.h); // px per mm，尽量铺满中栏
+        setZoomPct(s / MM_PX * 100);
+        userZoomed = false;
+    }
+    var fitTimer = null;
+    function scheduleAutoFit() {
+        if (userZoomed) return;
+        clearTimeout(fitTimer); fitTimer = setTimeout(autoFit, 150);
     }
     function bindEvents() {
-        Array.prototype.forEach.call(document.querySelectorAll(".lib-item"), function (it) { it.addEventListener("dragstart", onLibDragStart); });
+        Array.prototype.forEach.call(document.querySelectorAll("#builtin-field-library .lib-item"), function (it) { it.addEventListener("dragstart", onLibDragStart); });
         canvas.addEventListener("dragover", onCanvasDragOver);
         canvas.addEventListener("drop", onCanvasDrop);
         canvas.addEventListener("mousedown", onFieldMouseDown);
@@ -793,18 +1133,39 @@
         $("tpl-name").addEventListener("input", function () { var t = activeTpl(); if (t) { t.name = this.value; persist(); } });
         $("tpl-merchant").addEventListener("input", function () { var t = activeTpl(); if (t) { t.merchant = this.value.trim(); persist(); renderMerchantFilter(); } });
         $("tpl-courier").onchange = function () { var t = activeTpl(); if (t) { t.courier = this.value; persist(); renderTemplateList(); } };
+        $("btn-apply-preset").onclick = function () {
+            var b = this, t = activeTpl(); if (!t) return;
+            var p = COURIER_PRESETS[$("tpl-courier").value];
+            if (!p) { toast("「其他」暂无预置布局"); return; }
+            if (b.dataset.arm !== "1") {
+                b.dataset.arm = "1"; b.textContent = "再点一次确认（将替换当前全部字段）"; b.style.borderColor = "#f3c6cf";
+                setTimeout(function () { b.dataset.arm = ""; b.textContent = "↺ 套用所选快递的预置布局"; b.style.borderColor = ""; }, 3000);
+                return;
+            }
+            b.dataset.arm = ""; b.textContent = "↺ 套用所选快递的预置布局"; b.style.borderColor = "";
+            t.courier = $("tpl-courier").value; t.size = p.size; t.fields = p.fields();
+            state.selectedId = null; t.updatedAt = Date.now();
+            persist(); syncTplForm(); syncPropPanel(); renderTemplateList(); autoFit();
+            toast("已套用「" + p.name + "」预置布局（字段已绑定数据键）");
+        };
         $("tpl-size").onchange = function () {
             var t = activeTpl(); if (!t) return; t.size = this.value;
             $("custom-size").hidden = t.size !== "custom";
             if (t.size === "custom") { t.customW = parseFloat($("custom-w").value) || 100; t.customH = parseFloat($("custom-h").value) || 150; }
-            persist(); renderCanvas(); renderTemplateList();
+            persist(); renderTemplateList(); autoFit();
         };
         $("custom-w").addEventListener("input", function () { var t = activeTpl(); if (!t) return; t.customW = parseFloat(this.value) || 100; persist(); renderCanvas(); });
         $("custom-h").addEventListener("input", function () { var t = activeTpl(); if (!t) return; t.customH = parseFloat(this.value) || 150; persist(); renderCanvas(); });
-        $("zoom").oninput = function () { state.scale = parseInt(this.value) / 100; $("zoom-val").textContent = this.value + "%"; renderCanvas(); };
+        $("zoom").oninput = function () { userZoomed = true; setZoomPct(parseInt(this.value)); };
+        window.addEventListener("resize", scheduleAutoFit);
+        canvasWrap.addEventListener("wheel", function (e) {
+            if (!e.ctrlKey && !e.metaKey) return;
+            e.preventDefault(); userZoomed = true;
+            setZoomPct(zoomPct() + (e.deltaY < 0 ? 10 : -10));
+        }, { passive: false });
         $("show-grid").onchange = function () { state.showGrid = this.checked; renderCanvas(); };
         $("snap").onchange = function () { state.snap = this.checked; };
-        ["f-id", "f-label", "f-type", "f-x", "f-y", "f-w", "f-h", "f-font", "f-fontfamily", "f-bold", "f-italic",
+        ["f-id", "f-datakey", "f-label", "f-labelpos", "f-type", "f-x", "f-y", "f-w", "f-h", "f-font", "f-fontfamily", "f-bold", "f-italic",
          "f-align", "f-color-text", "f-placeholder", "f-showlabel", "f-labelsize", "f-labelcolor-text", "f-border",
          "f-bordercolor-text", "f-bgcolor-text"].forEach(function (id) {
             $(id).addEventListener("input", applyPropChange); $(id).addEventListener("change", applyPropChange);
@@ -839,10 +1200,11 @@
     loadStore();
     syncTplForm();
     bindEvents();
+    renderPresetGrid();
+    loadCustomFieldSources();
     renderTemplateList();
-    renderCanvas();
     syncPropPanel();
-    autoFit();
+    autoFit(); // 初始即等比放大铺满中栏（内部会渲染画布）
 })();
 </script>
 </body>
